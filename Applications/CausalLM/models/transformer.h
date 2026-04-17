@@ -55,6 +55,9 @@ using ModelHandle = std::unique_ptr<ml::train::Model>;
 
 using json = nlohmann::json;
 
+// Memory pointer and its size
+typedef std::pair<void *, size_t> multimodal_pointer;
+
 /**
  * @brief Model Type Enum
  */
@@ -114,6 +117,16 @@ public:
   virtual void run(const WSTR prompt, bool do_sample = false,
                    const WSTR system_prompt = "", const WSTR tail_prompt = "",
                    bool log_output = true);
+
+  /**
+   * @brief run the Transformer model, but with multimodal input and arbitrary
+   * output
+   */
+  virtual multimodal_pointer
+  run_image(const WSTR prompt, multimodal_pointer image, int image_height,
+            int image_width, bool do_sample = false,
+            const WSTR system_prompt = "", const WSTR tail_prompt = "",
+            bool log_output = true);
 
   /**
    * @brief Get TransformerPerformanceMetrics
