@@ -20,7 +20,7 @@
         "backendApiVersion": "5.38.0",
         "socVersion": "",
         "contextBlobVersion": "3.3.3",
-        "contextBlobSize": 1166299136,
+        "contextBlobSize": 1166589952,
         "numContextTensors": 0,
         "contextTensors": [],
         "numGraphs": 2,
@@ -50,8 +50,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0004169851599726826,
-                                        "offset": -32125
+                                        "scale": 0.0006203884840942919,
+                                        "offset": -30247
                                     }
                                 }
                             }
@@ -128,7 +128,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.009251043200492859,
+                                        "scale": 0.010829813778400422,
                                         "offset": -128
                                     }
                                 }
@@ -154,8 +154,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 5.2260332107543949,
-                                        "offset": -84
+                                        "scale": 0.11133469641208649,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -231,7 +231,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.007355503272265196,
+                                        "scale": 0.007383704651147127,
                                         "offset": -128
                                     }
                                 }
@@ -257,8 +257,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.9528564810752869,
-                                        "offset": -48
+                                        "scale": 0.1183801144361496,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -282,8 +282,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00038210651837289333,
-                                        "offset": -22758
+                                        "scale": 0.0003965501091443002,
+                                        "offset": -21920
                                     }
                                 }
                             }
@@ -308,7 +308,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.010075193829834462,
+                                        "scale": 0.010130907408893109,
                                         "offset": -128
                                     }
                                 }
@@ -334,8 +334,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.315598964691162,
-                                        "offset": -221
+                                        "scale": 0.12309478223323822,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -385,7 +385,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.008501657284796238,
+                                        "scale": 0.008520235307514668,
                                         "offset": -128
                                     }
                                 }
@@ -411,8 +411,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.6161761283874512,
-                                        "offset": -155
+                                        "scale": 0.10299450904130936,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -436,8 +436,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0002772906154859811,
-                                        "offset": -19490
+                                        "scale": 0.00031195138581097126,
+                                        "offset": -24606
                                     }
                                 }
                             }
@@ -514,7 +514,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00787198543548584,
+                                        "scale": 0.007875176146626473,
                                         "offset": -128
                                     }
                                 }
@@ -540,8 +540,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.16136503219604493,
-                                        "offset": -58
+                                        "scale": 0.1679007112979889,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -591,8 +591,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0006135593866929412,
-                                        "offset": -18477
+                                        "scale": 0.0006293935002759099,
+                                        "offset": -19660
                                     }
                                 }
                             }
@@ -617,7 +617,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.010128771886229515,
+                                        "scale": 0.010025396943092347,
                                         "offset": -128
                                     }
                                 }
@@ -643,8 +643,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.236703872680664,
-                                        "offset": -224
+                                        "scale": 0.12334509938955307,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -668,8 +668,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0003422287409193814,
-                                        "offset": -15766
+                                        "scale": 0.0003387269680388272,
+                                        "offset": -15251
                                     }
                                 }
                             }
@@ -694,7 +694,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00865684263408184,
+                                        "scale": 0.008771576918661595,
                                         "offset": -128
                                     }
                                 }
@@ -720,8 +720,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.033299207687378,
-                                        "offset": -203
+                                        "scale": 0.11503645032644272,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -771,7 +771,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.010013796389102936,
+                                        "scale": 0.010047865100204945,
                                         "offset": -128
                                     }
                                 }
@@ -797,8 +797,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 2.635650634765625,
-                                        "offset": -218
+                                        "scale": 0.12380025535821915,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -822,8 +822,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00046788514009676874,
-                                        "offset": -44142
+                                        "scale": 0.0004816720320377499,
+                                        "offset": -42878
                                     }
                                 }
                             }
@@ -848,7 +848,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.01218772679567337,
+                                        "scale": 0.012325484305620194,
                                         "offset": -128
                                     }
                                 }
@@ -874,8 +874,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.4577760696411133,
-                                        "offset": -21
+                                        "scale": 0.12549352645874024,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -899,8 +899,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00041648541809991,
-                                        "offset": -32932
+                                        "scale": 0.00044103586697019637,
+                                        "offset": -32875
                                     }
                                 }
                             }
@@ -925,7 +925,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.007298616226762533,
+                                        "scale": 0.0073804487474262718,
                                         "offset": -128
                                     }
                                 }
@@ -951,8 +951,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.10328496992588043,
-                                        "offset": -184
+                                        "scale": 0.15622927248477937,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -976,8 +976,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00028041741461493075,
-                                        "offset": -34963
+                                        "scale": 0.00028310331981629133,
+                                        "offset": -34631
                                     }
                                 }
                             }
@@ -1002,7 +1002,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.012907148338854313,
+                                        "scale": 0.012878184206783772,
                                         "offset": -128
                                     }
                                 }
@@ -1028,8 +1028,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.9605669975280762,
-                                        "offset": -32
+                                        "scale": 0.12265921384096146,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -1053,8 +1053,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.000253645092016086,
-                                        "offset": -32180
+                                        "scale": 0.00026149090263061225,
+                                        "offset": -33180
                                     }
                                 }
                             }
@@ -1079,7 +1079,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.012379970401525498,
+                                        "scale": 0.012318450957536698,
                                         "offset": -128
                                     }
                                 }
@@ -1105,8 +1105,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.8913677930831909,
-                                        "offset": -186
+                                        "scale": 0.10528775304555893,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -1156,7 +1156,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.011943128891289235,
+                                        "scale": 0.012018742971122265,
                                         "offset": -128
                                     }
                                 }
@@ -1182,8 +1182,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.9529920220375061,
-                                        "offset": -221
+                                        "scale": 0.1227845624089241,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -1207,8 +1207,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0003914552798960358,
-                                        "offset": -33409
+                                        "scale": 0.00040004507172852755,
+                                        "offset": -34098
                                     }
                                 }
                             }
@@ -1233,7 +1233,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.012704676017165184,
+                                        "scale": 0.013334156945347786,
                                         "offset": -128
                                     }
                                 }
@@ -1259,8 +1259,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.8159253597259522,
-                                        "offset": -16
+                                        "scale": 0.12570659816265107,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -1284,8 +1284,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0005535635282285512,
-                                        "offset": -40444
+                                        "scale": 0.0005436707870103419,
+                                        "offset": -41637
                                     }
                                 }
                             }
@@ -1313,8 +1313,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 5.2260332107543949,
-                                        "offset": -84
+                                        "scale": 0.11133469641208649,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -1339,7 +1339,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.009251043200492859,
+                                        "scale": 0.010829813778400422,
                                         "offset": -128
                                     }
                                 }
@@ -1365,8 +1365,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.9528564810752869,
-                                        "offset": -48
+                                        "scale": 0.1183801144361496,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -1391,7 +1391,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.007355503272265196,
+                                        "scale": 0.007383704651147127,
                                         "offset": -128
                                     }
                                 }
@@ -1417,8 +1417,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.315598964691162,
-                                        "offset": -221
+                                        "scale": 0.12309478223323822,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -1443,7 +1443,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.010075193829834462,
+                                        "scale": 0.010130907408893109,
                                         "offset": -128
                                     }
                                 }
@@ -1469,8 +1469,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.6161761283874512,
-                                        "offset": -155
+                                        "scale": 0.10299450904130936,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -1495,7 +1495,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.008501657284796238,
+                                        "scale": 0.008520235307514668,
                                         "offset": -128
                                     }
                                 }
@@ -1521,8 +1521,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.16136503219604493,
-                                        "offset": -58
+                                        "scale": 0.1679007112979889,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -1547,7 +1547,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00787198543548584,
+                                        "scale": 0.007875176146626473,
                                         "offset": -128
                                     }
                                 }
@@ -1573,8 +1573,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.236703872680664,
-                                        "offset": -224
+                                        "scale": 0.12334509938955307,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -1599,7 +1599,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.010128771886229515,
+                                        "scale": 0.010025396943092347,
                                         "offset": -128
                                     }
                                 }
@@ -1625,8 +1625,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.033299207687378,
-                                        "offset": -203
+                                        "scale": 0.11503645032644272,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -1651,7 +1651,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00865684263408184,
+                                        "scale": 0.008771576918661595,
                                         "offset": -128
                                     }
                                 }
@@ -1677,8 +1677,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 2.635650634765625,
-                                        "offset": -218
+                                        "scale": 0.12380025535821915,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -1703,7 +1703,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.010013796389102936,
+                                        "scale": 0.010047865100204945,
                                         "offset": -128
                                     }
                                 }
@@ -1729,8 +1729,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.4577760696411133,
-                                        "offset": -21
+                                        "scale": 0.12549352645874024,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -1755,7 +1755,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.01218772679567337,
+                                        "scale": 0.012325484305620194,
                                         "offset": -128
                                     }
                                 }
@@ -1781,8 +1781,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.10328496992588043,
-                                        "offset": -184
+                                        "scale": 0.15622927248477937,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -1807,7 +1807,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.007298616226762533,
+                                        "scale": 0.0073804487474262718,
                                         "offset": -128
                                     }
                                 }
@@ -1833,8 +1833,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.9605669975280762,
-                                        "offset": -32
+                                        "scale": 0.12265921384096146,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -1859,7 +1859,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.012907148338854313,
+                                        "scale": 0.012878184206783772,
                                         "offset": -128
                                     }
                                 }
@@ -1885,8 +1885,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.8913677930831909,
-                                        "offset": -186
+                                        "scale": 0.10528775304555893,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -1911,7 +1911,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.012379970401525498,
+                                        "scale": 0.012318450957536698,
                                         "offset": -128
                                     }
                                 }
@@ -1937,8 +1937,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.9529920220375061,
-                                        "offset": -221
+                                        "scale": 0.1227845624089241,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -1963,7 +1963,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.011943128891289235,
+                                        "scale": 0.012018742971122265,
                                         "offset": -128
                                     }
                                 }
@@ -1989,8 +1989,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.8159253597259522,
-                                        "offset": -16
+                                        "scale": 0.12570659816265107,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -2015,7 +2015,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.012704676017165184,
+                                        "scale": 0.013334156945347786,
                                         "offset": -128
                                     }
                                 }
@@ -2041,8 +2041,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 3.7487266063690187,
-                                        "offset": -92
+                                        "scale": 0.17372694611549378,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -2067,7 +2067,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.008466681465506554,
+                                        "scale": 0.008617362007498742,
                                         "offset": -128
                                     }
                                 }
@@ -2080,7 +2080,7 @@
                     "graphBlobInfo": {
                         "version": "QNN_SYSTEM_CONTEXT_HTP_GRAPH_INFO_BLOB_VERSION_V1",
                         "info": {
-                            "spillFillBufferSize": 21495808,
+                            "spillFillBufferSize": 21626880,
                             "optimizationLevel": 3,
                             "vtcmSize": 8,
                             "htpDlbc": 0,
@@ -2093,10 +2093,10 @@
                         "nativeVChannelSize": 64,
                         "isSafeShareIO": 0,
                         "ioTensorSize": 29360128,
-                        "opDataSize": 7108096,
-                        "constSize": 172288,
-                        "ddrTensorSize": 9728,
-                        "sharedWeightsSize": 266711040
+                        "opDataSize": 7052288,
+                        "constSize": 171776,
+                        "ddrTensorSize": 0,
+                        "sharedWeightsSize": 266747904
                     },
                     "startOpIndex": 121,
                     "endOpIndex": 0
@@ -2127,8 +2127,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0004169851599726826,
-                                        "offset": -32125
+                                        "scale": 0.0006203884840942919,
+                                        "offset": -30247
                                     }
                                 }
                             }
@@ -2153,7 +2153,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.000030518036510329696,
+                                        "scale": 0.00003051804378628731,
                                         "offset": -32768
                                     }
                                 }
@@ -2179,7 +2179,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.000030517945560859519,
+                                        "scale": 0.00003051804378628731,
                                         "offset": -32768
                                     }
                                 }
@@ -2205,7 +2205,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.009251043200492859,
+                                        "scale": 0.010829813778400422,
                                         "offset": -128
                                     }
                                 }
@@ -2231,8 +2231,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 5.2260332107543949,
-                                        "offset": -84
+                                        "scale": 0.11133469641208649,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -2308,7 +2308,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.007355503272265196,
+                                        "scale": 0.007383704651147127,
                                         "offset": -128
                                     }
                                 }
@@ -2334,8 +2334,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.9528564810752869,
-                                        "offset": -48
+                                        "scale": 0.1183801144361496,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -2359,8 +2359,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00038210651837289333,
-                                        "offset": -22758
+                                        "scale": 0.0003965501091443002,
+                                        "offset": -21920
                                     }
                                 }
                             }
@@ -2385,7 +2385,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.010075193829834462,
+                                        "scale": 0.010130907408893109,
                                         "offset": -128
                                     }
                                 }
@@ -2411,8 +2411,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.315598964691162,
-                                        "offset": -221
+                                        "scale": 0.12309478223323822,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -2462,7 +2462,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.008501657284796238,
+                                        "scale": 0.008520235307514668,
                                         "offset": -128
                                     }
                                 }
@@ -2488,8 +2488,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.6161761283874512,
-                                        "offset": -155
+                                        "scale": 0.10299450904130936,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -2513,8 +2513,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0002772906154859811,
-                                        "offset": -19490
+                                        "scale": 0.00031195138581097126,
+                                        "offset": -24606
                                     }
                                 }
                             }
@@ -2539,7 +2539,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0000305180401483085,
+                                        "scale": 0.00003051804378628731,
                                         "offset": -32768
                                     }
                                 }
@@ -2565,7 +2565,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.000030518032872350889,
+                                        "scale": 0.00003051804378628731,
                                         "offset": -32768
                                     }
                                 }
@@ -2584,14 +2584,14 @@
                                     1,
                                     1,
                                     512,
-                                    8191
+                                    8703
                                 ],
                                 "memType": "QNN_TENSORMEMTYPE_RAW",
                                 "quantizeParams": {
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00787198543548584,
+                                        "scale": 0.007875176146626473,
                                         "offset": -128
                                     }
                                 }
@@ -2609,7 +2609,7 @@
                                 "dimensions": [
                                     1,
                                     1,
-                                    8191,
+                                    8703,
                                     512
                                 ],
                                 "memType": "QNN_TENSORMEMTYPE_RAW",
@@ -2617,8 +2617,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.16136503219604493,
-                                        "offset": -58
+                                        "scale": 0.1679007112979889,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -2636,7 +2636,7 @@
                                     1,
                                     1,
                                     1,
-                                    8192
+                                    8704
                                 ],
                                 "memType": "QNN_TENSORMEMTYPE_RAW",
                                 "quantizeParams": {
@@ -2668,8 +2668,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0006135593866929412,
-                                        "offset": -18477
+                                        "scale": 0.0006293935002759099,
+                                        "offset": -19660
                                     }
                                 }
                             }
@@ -2694,7 +2694,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.010128771886229515,
+                                        "scale": 0.010025396943092347,
                                         "offset": -128
                                     }
                                 }
@@ -2720,8 +2720,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.236703872680664,
-                                        "offset": -224
+                                        "scale": 0.12334509938955307,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -2745,8 +2745,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0003422287409193814,
-                                        "offset": -15766
+                                        "scale": 0.0003387269680388272,
+                                        "offset": -15251
                                     }
                                 }
                             }
@@ -2771,7 +2771,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00865684263408184,
+                                        "scale": 0.008771576918661595,
                                         "offset": -128
                                     }
                                 }
@@ -2797,8 +2797,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.033299207687378,
-                                        "offset": -203
+                                        "scale": 0.11503645032644272,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -2848,7 +2848,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.010013796389102936,
+                                        "scale": 0.010047865100204945,
                                         "offset": -128
                                     }
                                 }
@@ -2874,8 +2874,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 2.635650634765625,
-                                        "offset": -218
+                                        "scale": 0.12380025535821915,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -2899,8 +2899,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00046788514009676874,
-                                        "offset": -44142
+                                        "scale": 0.0004816720320377499,
+                                        "offset": -42878
                                     }
                                 }
                             }
@@ -2925,7 +2925,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.01218772679567337,
+                                        "scale": 0.012325484305620194,
                                         "offset": -128
                                     }
                                 }
@@ -2951,8 +2951,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.4577760696411133,
-                                        "offset": -21
+                                        "scale": 0.12549352645874024,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -2976,8 +2976,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00041648541809991,
-                                        "offset": -32932
+                                        "scale": 0.00044103586697019637,
+                                        "offset": -32875
                                     }
                                 }
                             }
@@ -2995,14 +2995,14 @@
                                     1,
                                     1,
                                     512,
-                                    8191
+                                    8703
                                 ],
                                 "memType": "QNN_TENSORMEMTYPE_RAW",
                                 "quantizeParams": {
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.007298616226762533,
+                                        "scale": 0.0073804487474262718,
                                         "offset": -128
                                     }
                                 }
@@ -3020,7 +3020,7 @@
                                 "dimensions": [
                                     1,
                                     1,
-                                    8191,
+                                    8703,
                                     512
                                 ],
                                 "memType": "QNN_TENSORMEMTYPE_RAW",
@@ -3028,8 +3028,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.10328496992588043,
-                                        "offset": -184
+                                        "scale": 0.15622927248477937,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -3053,8 +3053,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00028041741461493075,
-                                        "offset": -34963
+                                        "scale": 0.00028310331981629133,
+                                        "offset": -34631
                                     }
                                 }
                             }
@@ -3079,7 +3079,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.012907148338854313,
+                                        "scale": 0.012878184206783772,
                                         "offset": -128
                                     }
                                 }
@@ -3105,8 +3105,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.9605669975280762,
-                                        "offset": -32
+                                        "scale": 0.12265921384096146,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -3130,8 +3130,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.000253645092016086,
-                                        "offset": -32180
+                                        "scale": 0.00026149090263061225,
+                                        "offset": -33180
                                     }
                                 }
                             }
@@ -3156,7 +3156,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.012379970401525498,
+                                        "scale": 0.012318450957536698,
                                         "offset": -128
                                     }
                                 }
@@ -3182,8 +3182,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.8913677930831909,
-                                        "offset": -186
+                                        "scale": 0.10528775304555893,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -3233,7 +3233,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.011943128891289235,
+                                        "scale": 0.012018742971122265,
                                         "offset": -128
                                     }
                                 }
@@ -3259,8 +3259,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.9529920220375061,
-                                        "offset": -221
+                                        "scale": 0.1227845624089241,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -3284,8 +3284,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0003914552798960358,
-                                        "offset": -33409
+                                        "scale": 0.00040004507172852755,
+                                        "offset": -34098
                                     }
                                 }
                             }
@@ -3310,7 +3310,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.012704676017165184,
+                                        "scale": 0.013334156945347786,
                                         "offset": -128
                                     }
                                 }
@@ -3336,8 +3336,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.8159253597259522,
-                                        "offset": -16
+                                        "scale": 0.12570659816265107,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -3361,8 +3361,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0005535635282285512,
-                                        "offset": -40444
+                                        "scale": 0.0005436707870103419,
+                                        "offset": -41637
                                     }
                                 }
                             }
@@ -3380,14 +3380,14 @@
                                     1,
                                     1,
                                     512,
-                                    8191
+                                    8703
                                 ],
                                 "memType": "QNN_TENSORMEMTYPE_RAW",
                                 "quantizeParams": {
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.008466681465506554,
+                                        "scale": 0.008617362007498742,
                                         "offset": -128
                                     }
                                 }
@@ -3405,7 +3405,7 @@
                                 "dimensions": [
                                     1,
                                     1,
-                                    8191,
+                                    8703,
                                     512
                                 ],
                                 "memType": "QNN_TENSORMEMTYPE_RAW",
@@ -3413,8 +3413,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 3.7487266063690187,
-                                        "offset": -92
+                                        "scale": 0.17372694611549378,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -3463,8 +3463,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00034802977461367846,
-                                        "offset": -22860
+                                        "scale": 0.0003947050718124956,
+                                        "offset": -27907
                                     }
                                 }
                             }
@@ -3488,8 +3488,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.000398563890485093,
-                                        "offset": -48169
+                                        "scale": 0.00040452988469041884,
+                                        "offset": -47458
                                     }
                                 }
                             }
@@ -3513,8 +3513,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0008935785153880715,
-                                        "offset": -28207
+                                        "scale": 0.0008895549108274281,
+                                        "offset": -27306
                                     }
                                 }
                             }
@@ -3538,8 +3538,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0004581240355037153,
-                                        "offset": -47877
+                                        "scale": 0.0005014030612073839,
+                                        "offset": -45875
                                     }
                                 }
                             }
@@ -3563,8 +3563,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0003017270064447075,
-                                        "offset": -21704
+                                        "scale": 0.000323509331792593,
+                                        "offset": -24655
                                     }
                                 }
                             }
@@ -3588,8 +3588,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0003986577794421464,
-                                        "offset": -20919
+                                        "scale": 0.0004255313251633197,
+                                        "offset": -23673
                                     }
                                 }
                             }
@@ -3613,8 +3613,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00029354385333135724,
-                                        "offset": -16647
+                                        "scale": 0.0003177063481416553,
+                                        "offset": -19539
                                     }
                                 }
                             }
@@ -3638,8 +3638,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0004049637936986983,
-                                        "offset": -49738
+                                        "scale": 0.00047557373181916773,
+                                        "offset": -46363
                                     }
                                 }
                             }
@@ -3663,8 +3663,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0002716322196647525,
-                                        "offset": -33973
+                                        "scale": 0.0002794190077111125,
+                                        "offset": -34852
                                     }
                                 }
                             }
@@ -3688,8 +3688,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00044872768921777606,
-                                        "offset": -50682
+                                        "scale": 0.0005200508749112487,
+                                        "offset": -48820
                                     }
                                 }
                             }
@@ -3713,8 +3713,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0006023499881848693,
-                                        "offset": -35807
+                                        "scale": 0.0007459789048880339,
+                                        "offset": -38229
                                     }
                                 }
                             }
@@ -3738,8 +3738,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00046811148058623075,
-                                        "offset": -46341
+                                        "scale": 0.0005346849211491644,
+                                        "offset": -44181
                                     }
                                 }
                             }
@@ -3763,8 +3763,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00042374824988655746,
-                                        "offset": -49598
+                                        "scale": 0.0005333164008334279,
+                                        "offset": -48946
                                     }
                                 }
                             }
@@ -3788,8 +3788,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0005720092449337244,
-                                        "offset": -52445
+                                        "scale": 0.0007519667269662023,
+                                        "offset": -53631
                                     }
                                 }
                             }
@@ -3813,8 +3813,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0003940178721677512,
-                                        "offset": -29885
+                                        "scale": 0.000595557561609894,
+                                        "offset": -34593
                                     }
                                 }
                             }
@@ -3838,8 +3838,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0003492581599857658,
-                                        "offset": -32721
+                                        "scale": 0.0004238346009515226,
+                                        "offset": -36313
                                     }
                                 }
                             }
@@ -3863,8 +3863,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0003259139193687588,
-                                        "offset": -11016
+                                        "scale": 0.00044802407501265407,
+                                        "offset": -11500
                                     }
                                 }
                             }
@@ -3888,8 +3888,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0002780131180770695,
-                                        "offset": -35694
+                                        "scale": 0.00040712670306675136,
+                                        "offset": -43480
                                     }
                                 }
                             }
@@ -3913,8 +3913,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0004453131405171007,
-                                        "offset": -39905
+                                        "scale": 0.0006189701962284744,
+                                        "offset": -32874
                                     }
                                 }
                             }
@@ -3938,8 +3938,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.0006803331198170781,
-                                        "offset": -22491
+                                        "scale": 0.0006883344613015652,
+                                        "offset": -22992
                                     }
                                 }
                             }
@@ -3967,8 +3967,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 5.2260332107543949,
-                                        "offset": -84
+                                        "scale": 0.11133469641208649,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -3993,7 +3993,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.009251043200492859,
+                                        "scale": 0.010829813778400422,
                                         "offset": -128
                                     }
                                 }
@@ -4019,8 +4019,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.9528564810752869,
-                                        "offset": -48
+                                        "scale": 0.1183801144361496,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -4045,7 +4045,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.007355503272265196,
+                                        "scale": 0.007383704651147127,
                                         "offset": -128
                                     }
                                 }
@@ -4071,8 +4071,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.315598964691162,
-                                        "offset": -221
+                                        "scale": 0.12309478223323822,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -4097,7 +4097,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.010075193829834462,
+                                        "scale": 0.010130907408893109,
                                         "offset": -128
                                     }
                                 }
@@ -4123,8 +4123,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.6161761283874512,
-                                        "offset": -155
+                                        "scale": 0.10299450904130936,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -4149,7 +4149,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.008501657284796238,
+                                        "scale": 0.008520235307514668,
                                         "offset": -128
                                     }
                                 }
@@ -4175,8 +4175,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.16136503219604493,
-                                        "offset": -58
+                                        "scale": 0.1679007112979889,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -4201,7 +4201,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00787198543548584,
+                                        "scale": 0.007875176146626473,
                                         "offset": -128
                                     }
                                 }
@@ -4227,8 +4227,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.236703872680664,
-                                        "offset": -224
+                                        "scale": 0.12334509938955307,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -4253,7 +4253,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.010128771886229515,
+                                        "scale": 0.010025396943092347,
                                         "offset": -128
                                     }
                                 }
@@ -4279,8 +4279,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.033299207687378,
-                                        "offset": -203
+                                        "scale": 0.11503645032644272,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -4305,7 +4305,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.00865684263408184,
+                                        "scale": 0.008771576918661595,
                                         "offset": -128
                                     }
                                 }
@@ -4331,8 +4331,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 2.635650634765625,
-                                        "offset": -218
+                                        "scale": 0.12380025535821915,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -4357,7 +4357,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.010013796389102936,
+                                        "scale": 0.010047865100204945,
                                         "offset": -128
                                     }
                                 }
@@ -4383,8 +4383,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.4577760696411133,
-                                        "offset": -21
+                                        "scale": 0.12549352645874024,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -4409,7 +4409,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.01218772679567337,
+                                        "scale": 0.012325484305620194,
                                         "offset": -128
                                     }
                                 }
@@ -4435,8 +4435,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.10328496992588043,
-                                        "offset": -184
+                                        "scale": 0.15622927248477937,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -4461,7 +4461,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.007298616226762533,
+                                        "scale": 0.0073804487474262718,
                                         "offset": -128
                                     }
                                 }
@@ -4487,8 +4487,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 1.9605669975280762,
-                                        "offset": -32
+                                        "scale": 0.12265921384096146,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -4513,7 +4513,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.012907148338854313,
+                                        "scale": 0.012878184206783772,
                                         "offset": -128
                                     }
                                 }
@@ -4539,8 +4539,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.8913677930831909,
-                                        "offset": -186
+                                        "scale": 0.10528775304555893,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -4565,7 +4565,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.012379970401525498,
+                                        "scale": 0.012318450957536698,
                                         "offset": -128
                                     }
                                 }
@@ -4591,8 +4591,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.9529920220375061,
-                                        "offset": -221
+                                        "scale": 0.1227845624089241,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -4617,7 +4617,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.011943128891289235,
+                                        "scale": 0.012018742971122265,
                                         "offset": -128
                                     }
                                 }
@@ -4643,8 +4643,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.8159253597259522,
-                                        "offset": -16
+                                        "scale": 0.12570659816265107,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -4669,7 +4669,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.012704676017165184,
+                                        "scale": 0.013334156945347786,
                                         "offset": -128
                                     }
                                 }
@@ -4695,8 +4695,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 3.7487266063690187,
-                                        "offset": -92
+                                        "scale": 0.17372694611549378,
+                                        "offset": -128
                                     }
                                 }
                             }
@@ -4721,7 +4721,7 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.008466681465506554,
+                                        "scale": 0.008617362007498742,
                                         "offset": -128
                                     }
                                 }
@@ -4746,8 +4746,8 @@
                                     "definition": "QNN_DEFINITION_DEFINED",
                                     "quantizationEncoding": "QNN_QUANTIZATION_ENCODING_SCALE_OFFSET",
                                     "scaleOffset": {
-                                        "scale": 0.000859448395203799,
-                                        "offset": -34861
+                                        "scale": 0.0009083601180464029,
+                                        "offset": -32998
                                     }
                                 }
                             }
@@ -4759,7 +4759,7 @@
                     "graphBlobInfo": {
                         "version": "QNN_SYSTEM_CONTEXT_HTP_GRAPH_INFO_BLOB_VERSION_V1",
                         "info": {
-                            "spillFillBufferSize": 11534336,
+                            "spillFillBufferSize": 12845056,
                             "optimizationLevel": 3,
                             "vtcmSize": 8,
                             "htpDlbc": 0,
@@ -4771,11 +4771,11 @@
                         "nativeKChannelSize": 256,
                         "nativeVChannelSize": 64,
                         "isSafeShareIO": 0,
-                        "ioTensorSize": 29433856,
-                        "opDataSize": 15697920,
-                        "constSize": 888545024,
-                        "ddrTensorSize": 136704,
-                        "sharedWeightsSize": 266711040
+                        "ioTensorSize": 31014912,
+                        "opDataSize": 15868672,
+                        "constSize": 888629760,
+                        "ddrTensorSize": 0,
+                        "sharedWeightsSize": 266747904
                     },
                     "startOpIndex": 257,
                     "endOpIndex": 0
