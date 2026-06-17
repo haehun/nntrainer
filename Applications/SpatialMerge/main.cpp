@@ -19,6 +19,8 @@
  */
 
 #include <chrono>
+#include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -86,46 +88,48 @@ ModelHandle createModel() {
 
   /* ── Input ─────────────────────────────────────────────────── */
   model->addLayer(createLayer(
-    "input",
-    {nntrainer::withKey("name", "input"),
-     nntrainer::withKey("input_shape", "1:" + std::to_string(NUM_PATCHES) +
-                                         ":1:" + std::to_string(FEAT_DIM))}));
+    "input", {nntrainer::withKey("name", "input"),
+              nntrainer::withKey("input_shape",
+                                 "1:" + std::to_string(MERGED_PATCHES) +
+                                   ":1:" + std::to_string(MERGED_FEAT))}));
 
   /* ── Spatial Merge ─────────────────────────────────────────── */
-  model->addLayer(createLayer(
-    "reshape",
-    {nntrainer::withKey("name", "spatial_reshape1"),
-     nntrainer::withKey("target_shape", "1:" + std::to_string(PATCH_H) + ":" +
-                                          std::to_string(PATCH_W) + ":" +
-                                          std::to_string(FEAT_DIM))}));
+  // model->addLayer(createLayer(
+  //   "reshape",
+  //   {nntrainer::withKey("name", "spatial_reshape1"),
+  //    nntrainer::withKey("target_shape", "1:" + std::to_string(PATCH_H) + ":"
+  //    +
+  //                                         std::to_string(PATCH_W) + ":" +
+  //                                         std::to_string(FEAT_DIM))}));
 
-  model->addLayer(createLayer(
-    "reshape", {nntrainer::withKey("name", "spatial_reshape2"),
-                nntrainer::withKey("target_shape",
-                                   "1:" + std::to_string(PATCH_H) + ":" +
-                                     std::to_string(GRID_H) + ":" +
-                                     std::to_string(FEAT_DIM * MERGE_RATIO))}));
+  // model->addLayer(createLayer(
+  //   "reshape", {nntrainer::withKey("name", "spatial_reshape2"),
+  //               nntrainer::withKey("target_shape",
+  //                                  "1:" + std::to_string(PATCH_H) + ":" +
+  //                                    std::to_string(GRID_H) + ":" +
+  //                                    std::to_string(FEAT_DIM *
+  //                                    MERGE_RATIO))}));
 
-  model->addLayer(
-    createLayer("permute", {nntrainer::withKey("name", "spatial_permute1"),
-                            nntrainer::withKey("direction", "2,1,3")}));
+  // model->addLayer(
+  //   createLayer("permute", {nntrainer::withKey("name", "spatial_permute1"),
+  //                           nntrainer::withKey("direction", "2,1,3")}));
 
-  model->addLayer(createLayer(
-    "reshape",
-    {nntrainer::withKey("name", "spatial_reshape3"),
-     nntrainer::withKey("target_shape", "1:" + std::to_string(GRID_H) + ":" +
-                                          std::to_string(GRID_W) + ":" +
-                                          std::to_string(MERGED_FEAT))}));
+  // model->addLayer(createLayer(
+  //   "reshape",
+  //   {nntrainer::withKey("name", "spatial_reshape3"),
+  //    nntrainer::withKey("target_shape", "1:" + std::to_string(GRID_H) + ":" +
+  //                                         std::to_string(GRID_W) + ":" +
+  //                                         std::to_string(MERGED_FEAT))}));
 
-  model->addLayer(
-    createLayer("permute", {nntrainer::withKey("name", "spatial_permute2"),
-                            nntrainer::withKey("direction", "2,1,3")}));
+  // model->addLayer(
+  //   createLayer("permute", {nntrainer::withKey("name", "spatial_permute2"),
+  //                           nntrainer::withKey("direction", "2,1,3")}));
 
-  model->addLayer(createLayer(
-    "reshape", {nntrainer::withKey("name", "spatial_reshape4"),
-                nntrainer::withKey("target_shape",
-                                   "1:" + std::to_string(MERGED_PATCHES) +
-                                     ":1:" + std::to_string(MERGED_FEAT))}));
+  // model->addLayer(createLayer(
+  //   "reshape", {nntrainer::withKey("name", "spatial_reshape4"),
+  //               nntrainer::withKey("target_shape",
+  //                                  "1:" + std::to_string(MERGED_PATCHES) +
+  //                                    ":1:" + std::to_string(MERGED_FEAT))}));
 
   /* ── Merger MLP ────────────────────────────────────────────── */
   model->addLayer(createLayer("layer_normalization",
@@ -202,9 +206,24 @@ int main(int argc, char *argv[]) {
     std::cout << "Expected output: [1:" << MERGED_PATCHES << ":1:" << MLP_DIM3
               << "]" << std::endl;
 
-    /* ── Run inference with dummy data ──────────────────────── */
+    /* ── Load input data from file ──────────────────────────── */
     const unsigned int input_size = BATCH_SIZE * NUM_PATCHES * 1 * FEAT_DIM;
-    std::vector<float> input_data(input_size, 0.01f);
+    std::vector<float> input_data(input_size);
+
+    {
+      std::ifstream ifs("./model_input.bin", std::ios::binary);
+      if (!ifs.is_open()) {
+        std::cerr << "Error: cannot open ./model_input.bin" << std::endl;
+        return 1;
+      }
+      ifs.read(reinterpret_cast<char *>(input_data.data()),
+               input_size * sizeof(float));
+      if (!ifs) {
+        std::cerr << "Error: failed to read input data from ./model_input.bin"
+                  << std::endl;
+        return 1;
+      }
+    }
 
     auto start = std::chrono::high_resolution_clock::now();
     std::vector<float *> output =
@@ -214,6 +233,7 @@ int main(int argc, char *argv[]) {
     std::chrono::duration<double, std::milli> elapsed = end - start;
     std::cout << "\nInference time: " << elapsed.count() << " ms" << std::endl;
 
+    std::cout << std::setprecision(10);
     if (!output.empty()) {
       std::cout << "Output[0] sample values: ";
       for (unsigned int i = 0; i < 5 && i < MLP_DIM3; ++i) {
