@@ -32,6 +32,13 @@
 #include <stdexcept>
 #include <unordered_map>
 
+#ifndef _WIN32
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
+
 namespace causallm {
 
 static constexpr size_t SINGLE_INOUT_IDX = 0;
@@ -54,30 +61,6 @@ std::filesystem::path resolveLutPath(const std::string &manifest_path,
     return path;
 
   return std::filesystem::path(manifest_path).parent_path() / path;
-}
-
-std::vector<uint8_t> readBinaryFile(const std::filesystem::path &path) {
-  std::ifstream file(path, std::ios::binary | std::ios::ate);
-  NNTR_THROW_IF(!file.is_open(), std::runtime_error)
-    << "Failed to open LUT file: " << path.string();
-
-  const auto pos = file.tellg();
-  NNTR_THROW_IF(pos < 0, std::runtime_error)
-    << "Failed to get LUT file size: " << path.string();
-
-  const auto size = static_cast<size_t>(pos);
-  std::vector<uint8_t> bytes(size);
-
-  file.seekg(0, std::ios::beg);
-  if (size > 0) {
-    file.read(reinterpret_cast<char *>(bytes.data()),
-              static_cast<std::streamsize>(size));
-    NNTR_THROW_IF(static_cast<size_t>(file.gcount()) != size,
-                  std::runtime_error)
-      << "Failed to read complete LUT file: " << path.string();
-  }
-
-  return bytes;
 }
 
 const nlohmann::json &requireJsonObjectField(const nlohmann::json &json,
@@ -172,7 +155,8 @@ std::shared_ptr<QuantLut> loadUfixed8Manifest(const std::string &manifest_path,
   lut->offset = requireJsonIntField(quant_param, "offset", manifest_path);
   lut->is_raw_u16 = false;
   lut->is_signed4 = false;
-  lut->bytes = readBinaryFile(resolveLutPath(manifest_path, lut_path));
+  lut->bytes =
+    MappedBytes::mapFile(resolveLutPath(manifest_path, lut_path).string());
 
   derivePacked4BitDimensions(*lut, manifest_path);
   return lut;
@@ -193,7 +177,8 @@ std::shared_ptr<QuantLut> loadSfixed4Manifest(const std::string &manifest_path,
   lut->out_dim = requireJsonSizeField(json, "size", manifest_path);
   lut->is_raw_u16 = false;
   lut->is_signed4 = true;
-  lut->bytes = readBinaryFile(resolveLutPath(manifest_path, lut_path));
+  lut->bytes =
+    MappedBytes::mapFile(resolveLutPath(manifest_path, lut_path).string());
   lut->row_scales.reserve(quant_param.at("scale").size());
 
   for (const auto &scale : quant_param.at("scale")) {
@@ -255,7 +240,7 @@ std::shared_ptr<QuantLut> loadRawU16(const std::string &path,
     << "Raw UINT16 LUT size overflows size_t for " << path;
 
   const size_t expected_size = in_dim_hint * out_dim_hint * sizeof(uint16_t);
-  auto bytes = readBinaryFile(path);
+  auto bytes = MappedBytes::mapFile(path);
   NNTR_THROW_IF(bytes.size() != expected_size, std::runtime_error)
     << "Raw UINT16 LUT file size " << bytes.size()
     << " does not match in_dim*out_dim*2 (" << expected_size << ") for "
@@ -354,6 +339,108 @@ void decodePacked4BitRowToFloatType(const QuantLut &lut, size_t token_idx,
 }
 
 } // namespace
+
+MappedBytes::~MappedBytes() { reset(); }
+
+void MappedBytes::reset() noexcept {
+#ifndef _WIN32
+  if (map_addr_ != nullptr) {
+    ::munmap(map_addr_, size_);
+    map_addr_ = nullptr;
+  }
+#endif
+  ptr_ = nullptr;
+  size_ = 0;
+  owned_.clear();
+}
+
+MappedBytes::MappedBytes(MappedBytes &&other) noexcept :
+  ptr_(other.ptr_),
+  size_(other.size_),
+  map_addr_(other.map_addr_),
+  owned_(std::move(other.owned_)) {
+  other.ptr_ = nullptr;
+  other.size_ = 0;
+  other.map_addr_ = nullptr;
+}
+
+MappedBytes &MappedBytes::operator=(MappedBytes &&other) noexcept {
+  if (this != &other) {
+    reset();
+    ptr_ = other.ptr_;
+    size_ = other.size_;
+    map_addr_ = other.map_addr_;
+    owned_ = std::move(other.owned_);
+    other.ptr_ = nullptr;
+    other.size_ = 0;
+    other.map_addr_ = nullptr;
+  }
+  return *this;
+}
+
+MappedBytes MappedBytes::fromVector(std::vector<uint8_t> data) {
+  MappedBytes m;
+  m.owned_ = std::move(data);
+  m.ptr_ = m.owned_.data();
+  m.size_ = m.owned_.size();
+  return m;
+}
+
+MappedBytes MappedBytes::mapFile(const std::string &path) {
+#ifdef _WIN32
+  // No mmap on Windows: fall back to a full read into a heap buffer.
+  std::ifstream file(path, std::ios::binary | std::ios::ate);
+  NNTR_THROW_IF(!file.is_open(), std::runtime_error)
+    << "Failed to open LUT file: " << path;
+  const auto pos = file.tellg();
+  NNTR_THROW_IF(pos < 0, std::runtime_error)
+    << "Failed to get LUT file size: " << path;
+  std::vector<uint8_t> bytes(static_cast<size_t>(pos));
+  file.seekg(0, std::ios::beg);
+  if (!bytes.empty()) {
+    file.read(reinterpret_cast<char *>(bytes.data()),
+              static_cast<std::streamsize>(bytes.size()));
+    NNTR_THROW_IF(static_cast<size_t>(file.gcount()) != bytes.size(),
+                  std::runtime_error)
+      << "Failed to read complete LUT file: " << path;
+  }
+  return fromVector(std::move(bytes));
+#else
+  int fd = ::open(path.c_str(), O_RDONLY);
+  NNTR_THROW_IF(fd < 0, std::runtime_error)
+    << "Failed to open LUT file: " << path;
+
+  struct stat st {};
+  if (::fstat(fd, &st) != 0) {
+    ::close(fd);
+    NNTR_THROW_IF(true, std::runtime_error)
+      << "Failed to stat LUT file: " << path;
+  }
+
+  MappedBytes m;
+  const size_t len = static_cast<size_t>(st.st_size);
+  if (len == 0) {
+    ::close(fd);
+    return m; // empty mapping
+  }
+
+  void *addr = ::mmap(nullptr, len, PROT_READ, MAP_PRIVATE, fd, 0);
+  // The mapping keeps the underlying file alive, so the fd can be closed now.
+  ::close(fd);
+  NNTR_THROW_IF(addr == MAP_FAILED, std::runtime_error)
+    << "Failed to mmap LUT file: " << path;
+
+  // Embedding is a random row gather by token id, so touch is sparse. Advise
+  // the kernel to skip readahead — the whole point is to fault in only the
+  // rows the model actually uses rather than eagerly paging the entire LUT.
+  ::madvise(addr, len, MADV_RANDOM);
+
+  m.map_addr_ = addr;
+  m.ptr_ = static_cast<const uint8_t *>(addr);
+  m.size_ = len;
+  return m;
+#endif
+}
 
 std::shared_ptr<QuantLut> get_or_load_quant_lut(const std::string &path,
                                                 size_t in_dim_hint,

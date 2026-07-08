@@ -66,10 +66,50 @@ public:
 } // namespace props
 
 /**
+ * @brief RAII owner of LUT bytes, backed by a read-only mmap of the LUT file
+ * (POSIX) or a heap buffer fallback (Windows / in-memory tests).
+ *
+ * Embedding is a sparse row gather by token id, so the model only ever touches
+ * a small fraction of a large LUT. Memory-mapping lets those rows fault in on
+ * demand during forwarding instead of eagerly reading the whole file during
+ * layer finalize() — which used to dominate QNN model load time.
+ *
+ * Exposes data()/size()/empty() so it is a drop-in for the std::vector<uint8_t>
+ * it replaces. Move-only (a mapping must have a single owner to munmap once).
+ */
+class WIN_EXPORT MappedBytes {
+public:
+  MappedBytes() = default;
+  ~MappedBytes();
+  MappedBytes(MappedBytes &&other) noexcept;
+  MappedBytes &operator=(MappedBytes &&other) noexcept;
+  MappedBytes(const MappedBytes &) = delete;
+  MappedBytes &operator=(const MappedBytes &) = delete;
+
+  /// mmap @a path read-only (falls back to a full read on Windows / empty
+  /// file). Throws std::runtime_error on open/map failure.
+  static MappedBytes mapFile(const std::string &path);
+  /// Take ownership of an already in-memory buffer.
+  static MappedBytes fromVector(std::vector<uint8_t> data);
+
+  const uint8_t *data() const { return ptr_; }
+  size_t size() const { return size_; }
+  bool empty() const { return size_ == 0; }
+
+private:
+  void reset() noexcept;
+
+  const uint8_t *ptr_ = nullptr;
+  size_t size_ = 0;
+  void *map_addr_ = nullptr;   ///< non-null only when mmap-backed (to munmap)
+  std::vector<uint8_t> owned_; ///< holds data only when vector-backed
+};
+
+/**
  * @brief Shared sidecar embedding LUT loaded from raw UINT16 or JSON manifest.
  */
 struct QuantLut {
-  std::vector<uint8_t> bytes;
+  MappedBytes bytes;
   std::vector<float> row_scales;
 
   float scale = 1.0f;
