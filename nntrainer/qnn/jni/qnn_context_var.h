@@ -30,6 +30,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -40,6 +41,8 @@
 #include <layer_devel.h>
 
 #include <nntrainer_log.h>
+
+#include "qnn_timing.h"
 
 using namespace qnn;
 using namespace qnn::tools;
@@ -132,8 +135,20 @@ struct QNNVar {
   std::map<std::string, Qnn_Context_Graph_t>
     ct_map; /** bin file name - Context map **/
 
+  /**
+   * Guards ct_map. The QNN context binary can be deserialized either eagerly on
+   * a background thread (see Quick_Dot_AI_QNN context preload) or lazily on the
+   * first forward; this serializes those paths so a binary is created exactly
+   * once. Held for the whole makeContext() body, so a first forward that races
+   * an in-flight preload simply blocks until the load finishes. ct_map is a
+   * std::map, so references returned by findContext() stay valid across other
+   * inserts; entries are only erased at teardown (after the preload is joined).
+   */
+  std::mutex ct_mutex;
+
   std::optional<std::reference_wrapper<Qnn_Context_Graph_t>>
   findContext(std::string bin_path) {
+    std::lock_guard<std::mutex> lock(ct_mutex);
     auto mapIt = ct_map.find(bin_path);
     if (mapIt != ct_map.end()) {
       return mapIt->second;
@@ -142,6 +157,7 @@ struct QNNVar {
   }
 
   StatusCode freeContext(const std::string &bin_path) {
+    std::lock_guard<std::mutex> lock(ct_mutex);
     auto it = ct_map.find(bin_path);
     if (it == ct_map.end()) {
       ml_logw("Context not found for: %s", bin_path.c_str());
@@ -208,11 +224,18 @@ struct QNNVar {
   }
 
   StatusCode makeContext(props::FilePath bin) {
+    // Hold ct_mutex for the entire load so the background context preload and a
+    // racing first forward create the binary exactly once; the loser blocks
+    // here until the winner finishes. Look up ct_map directly rather than via
+    // findContext(), which would re-lock the same (non-recursive) mutex.
+    std::lock_guard<std::mutex> lock(ct_mutex);
 
-    if (findContext(bin.get())) {
+    if (ct_map.find(bin.get()) != ct_map.end()) {
       ml_logw("context is already exists");
       return StatusCode::SUCCESS;
     };
+
+    QNN_TIME_SCOPE("makeContext (context binary load, total): " + bin.get());
 
     // Let backendExtensions populate configs
     QnnContext_Config_t **customConfigs{nullptr};
@@ -239,10 +262,12 @@ struct QNNVar {
     std::shared_ptr<uint8_t> buffer{nullptr};
 
     void *mappedBuffer = nullptr;
+    auto _qnn_t = std::chrono::steady_clock::now();
     if (true != mmapBinaryFile(bin.get(), &mappedBuffer, bufferSize)) {
       ml_loge("Failed to read binary data");
       return StatusCode::FAILURE;
     }
+    QNN_TIME_SINCE("makeContext: mmapBinaryFile", _qnn_t);
 
     buffer = std::shared_ptr<uint8_t>(static_cast<uint8_t *>(mappedBuffer),
                                       [&bufferSize](uint8_t *ptr) {
@@ -254,6 +279,7 @@ struct QNNVar {
     auto returnStatus = StatusCode::SUCCESS;
     Qnn_Context_Graph_t context_i;
 
+    _qnn_t = std::chrono::steady_clock::now();
     QnnSystemContext_Handle_t sysCtxHandle{nullptr};
     if (QNN_SUCCESS !=
         m_qnnFunctionPointers.qnnSystemInterface.systemContextCreate(
@@ -281,6 +307,7 @@ struct QNNVar {
 
     m_qnnFunctionPointers.qnnSystemInterface.systemContextFree(sysCtxHandle);
     sysCtxHandle = nullptr;
+    QNN_TIME_SINCE("makeContext: systemContext metadata parse", _qnn_t);
 
     if (StatusCode::SUCCESS == returnStatus &&
         nullptr == m_qnnFunctionPointers.qnnInterface.contextCreateFromBinary) {
@@ -309,6 +336,7 @@ struct QNNVar {
       context_i.m_contextConfig[i + 1] = customConfigs[i];
     context_i.m_contextConfig[customConfigCount + 1] = nullptr;
 
+    _qnn_t = std::chrono::steady_clock::now();
     if (StatusCode::SUCCESS == returnStatus &&
         m_qnnFunctionPointers.qnnInterface.contextCreateFromBinary(
           m_backendHandle, m_deviceHandle,
@@ -318,6 +346,8 @@ struct QNNVar {
       ml_loge("Could not create context from binary.");
       returnStatus = StatusCode::FAILURE;
     }
+    QNN_TIME_SINCE("makeContext: contextCreateFromBinary (HTP deserialize)",
+                   _qnn_t);
 
     if (nullptr != m_backendExtensions && m_backendExtensions->interface()) {
       if (!m_backendExtensions->interface()->afterCreateFromBinary()) {

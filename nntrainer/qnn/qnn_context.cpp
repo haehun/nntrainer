@@ -23,6 +23,7 @@
 #include "BackendExtensions.hpp"
 
 #include "qnn_context.h"
+#include "qnn_timing.h"
 #include <QNNGraph.h>
 #include <cstdlib>
 #include <iostream>
@@ -145,6 +146,7 @@ void QNNContext::initialize() noexcept {
 
 int QNNContext::init() {
   LOGD("init: START");
+  QNN_TIME_SCOPE("QNNContext::init (backend bring-up, total)");
   std::cout << "qnncontext::init called" << std::endl;
   if (!log::initializeLogging()) {
     LOGE("init: Unable to initialize logging!");
@@ -180,9 +182,11 @@ int QNNContext::init() {
   }
   LOGD("init: calling dynamicloadutil::getQnnFunctionPointers");
 
+  auto _qnn_t = std::chrono::steady_clock::now();
   auto statusCode = dynamicloadutil::getQnnFunctionPointers(
     backEndPath, "", &qnn_data->m_qnnFunctionPointers,
     &qnn_data->m_backendLibraryHandle, false, nullptr);
+  QNN_TIME_SINCE("init: getQnnFunctionPointers (dlopen libQnnHtp.so)", _qnn_t);
   LOGD("init: getQnnFunctionPointers returned status=%d", (int)statusCode);
   if (dynamicloadutil::StatusCode::SUCCESS != statusCode) {
     if (dynamicloadutil::StatusCode::FAIL_LOAD_BACKEND == statusCode) {
@@ -199,8 +203,11 @@ int QNNContext::init() {
   }
 
   LOGD("init: calling getQnnSystemFunctionPointers");
+  _qnn_t = std::chrono::steady_clock::now();
   statusCode = qnn::tools::dynamicloadutil::getQnnSystemFunctionPointers(
     systemLibraryPath, &qnn_data->m_qnnFunctionPointers);
+  QNN_TIME_SINCE("init: getQnnSystemFunctionPointers (dlopen libQnnSystem.so)",
+                 _qnn_t);
   LOGD("init: getQnnSystemFunctionPointers returned status=%d",
        (int)statusCode);
   if (qnn::tools::dynamicloadutil::StatusCode::SUCCESS != statusCode) {
@@ -238,9 +245,12 @@ int QNNContext::init() {
   backend_extensions_config.configFilePath = config_path;
   backend_extensions_config.sharedLibraryPath = "libQnnHtpNetRunExtensions.so";
 
+  _qnn_t = std::chrono::steady_clock::now();
   BackendExtensions *backend_extensions = new BackendExtensions(
     backend_extensions_config, qnn_data->m_backendLibraryHandle, false, nullptr,
     QNN_LOG_LEVEL_ERROR);
+  QNN_TIME_SINCE("init: BackendExtensions ctor (config + dlopen extensions)",
+                 _qnn_t);
   qnn_data->m_backendExtensions = backend_extensions;
   LOGD("init: Backend extensions created");
 
@@ -270,10 +280,12 @@ int QNNContext::init() {
   }
 
   LOGD("init: Calling backendCreate");
+  _qnn_t = std::chrono::steady_clock::now();
   auto qnnStatus = qnn_data->m_qnnFunctionPointers.qnnInterface.backendCreate(
     qnn_data->m_logHandle,
     (const QnnBackend_Config_t **)qnn_data->m_backendConfig,
     &qnn_data->m_backendHandle);
+  QNN_TIME_SINCE("init: backendCreate", _qnn_t);
   LOGD("init: backendCreate returned status=%lu", qnnStatus);
   if (QNN_BACKEND_NO_ERROR != qnnStatus) {
     LOGE("init: Could not initialize backend, error=%d",
@@ -307,7 +319,9 @@ int QNNContext::init() {
   LOGD("init: isDevicePropertySupported returned %d",
        (int)devicePropertySupportStatus);
   if (StatusCode::FAILURE != devicePropertySupportStatus) {
+    _qnn_t = std::chrono::steady_clock::now();
     auto createDeviceStatus = this->createDevice();
+    QNN_TIME_SINCE("init: createDevice (HTP device power-up)", _qnn_t);
     LOGD("init: createDevice returned %d", (int)createDeviceStatus);
     if (StatusCode::SUCCESS != createDeviceStatus) {
       LOGE("init: Device Creation failure");
@@ -324,11 +338,13 @@ int QNNContext::init() {
   }
 
   LOGD("init: Registering Op Packages");
+  _qnn_t = std::chrono::steady_clock::now();
   if (StatusCode::SUCCESS != this->registerOpPackages()) {
     LOGE("init: Register Op Packages failure");
     ml_loge("Register Op Packages failure");
     return -1;
   }
+  QNN_TIME_SINCE("init: registerOpPackages", _qnn_t);
 
   LOGD("init: END (returning 0)");
   return 0;

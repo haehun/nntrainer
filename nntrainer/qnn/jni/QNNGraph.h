@@ -107,6 +107,11 @@ private:
   sample_app::QnnFunctionPointers m_qnnFunctionPointers;
 
   int counter;
+
+  // One-shot guard: log how long the very first forward waits to acquire the
+  // QNN context (i.e. how much of the background preload it had to block on).
+  // ~0 ms means the async preload fully hid the deserialization.
+  bool context_wait_logged_ = false;
 };
 
 } // namespace nntrainer

@@ -172,10 +172,21 @@ void QNNGraph::forwarding(RunLayerContext &context, bool training) {
   auto qc_var = getQNNVar(context);
   unsigned int graphIdx = 0;
 
+  // Measure how long the first forward blocks acquiring the QNN context. With
+  // the async preload this should be ~0 ms (already loaded); without it, this
+  // is the full contextCreateFromBinary cost on the critical path.
+  const bool log_ctx_wait = !context_wait_logged_;
+  const auto _qnn_t_ctx = std::chrono::steady_clock::now();
   if (!qc_var->findContext(bin_path)) {
     ml_logw("Context is not created. Create Now");
 
     qc_var->makeContext(bin_path);
+  }
+  if (log_ctx_wait) {
+    context_wait_logged_ = true;
+    QNN_TIMING_LOG("first forward: context acquire wait (graph=%s): %lld ms",
+                   context.getName().c_str(),
+                   ::nntrainer::qnn_ms_since(_qnn_t_ctx));
   }
 
   auto graphInfo = qc_var->graphRetrieve(bin_path, context.getName());
