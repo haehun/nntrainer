@@ -58,6 +58,10 @@ enum class StatusCode {
   QNN_FEATURE_UNSUPPORTED
 };
 
+/**
+ * @brief Per-binary QNN context state: the backend context handle plus the
+ * graphs deserialized from it, indexed by graph name.
+ */
 struct Qnn_Context_Graph_t {
   Qnn_ContextHandle_t m_context;
   qnn_wrapper_api::GraphInfo_t **m_graphsInfo;
@@ -70,6 +74,10 @@ struct Qnn_Context_Graph_t {
 
   QnnContext_Config_t **m_contextConfig = nullptr;
 
+  /**
+   * @brief Populate graph_map from m_graphsInfo/m_graphsCount after the
+   * binary has been deserialized.
+   */
   void setGraphInfoMap() {
     for (uint32_t i = 0; i < m_graphsCount; ++i) {
       std::string n((m_graphsInfo)[i]->graphName);
@@ -77,6 +85,10 @@ struct Qnn_Context_Graph_t {
     }
   }
 
+  /**
+   * @brief Look up a graph by name, falling back to a case-insensitive
+   * match against the binary's real graph names.
+   */
   qnn_wrapper_api::GraphInfo_t *getGraphPtr(const std::string &graph_name) {
     auto mapIt = graph_map.find(graph_name);
     if (mapIt != graph_map.end()) {
@@ -105,6 +117,9 @@ struct Qnn_Context_Graph_t {
     return nullptr;
   }
 
+  /**
+   * @brief Look up a graph's index within this context by name.
+   */
   int getGraphIdx(std::string graph_name) {
     auto mapIt = graph_idx.find(graph_name);
     if (mapIt != graph_idx.end()) {
@@ -116,6 +131,11 @@ struct Qnn_Context_Graph_t {
   }
 };
 
+/**
+ * @brief Per-backend-instance QNN state shared by a QNNContext and every
+ * QNNGraph layer that uses it: backend/device handles, function pointers,
+ * and the cache of context binaries already deserialized (ct_map).
+ */
 struct QNNVar {
   QnnBackend_Config_t **m_backendConfig = nullptr;
   Qnn_BackendHandle_t m_backendHandle = nullptr;
@@ -146,6 +166,10 @@ struct QNNVar {
    */
   std::mutex ct_mutex;
 
+  /**
+   * @brief Look up the deserialized context/graphs for bin_path, if it has
+   * already been created.
+   */
   std::optional<std::reference_wrapper<Qnn_Context_Graph_t>>
   findContext(std::string bin_path) {
     std::lock_guard<std::mutex> lock(ct_mutex);
@@ -156,6 +180,10 @@ struct QNNVar {
     return std::nullopt;
   }
 
+  /**
+   * @brief Free the QNN context handle, graphs info, and context config
+   * owned by ct_map[bin_path], then erase the entry.
+   */
   StatusCode freeContext(const std::string &bin_path) {
     std::lock_guard<std::mutex> lock(ct_mutex);
     auto it = ct_map.find(bin_path);
@@ -210,6 +238,9 @@ struct QNNVar {
     return StatusCode::SUCCESS;
   }
 
+  /**
+   * @brief Free every context currently tracked in ct_map.
+   */
   StatusCode freeAllContexts() {
     // 반복 중 erase하면 안 되므로 키를 먼저 복사
     std::vector<std::string> keys;
@@ -223,6 +254,10 @@ struct QNNVar {
     return StatusCode::SUCCESS;
   }
 
+  /**
+   * @brief Deserialize a QNN context binary (mmap + contextCreateFromBinary)
+   * and cache it in ct_map, or return immediately if bin is already cached.
+   */
   StatusCode makeContext(props::FilePath bin) {
     // Hold ct_mutex for the entire load so the background context preload and a
     // racing first forward create the binary exactly once; the loser blocks
@@ -365,6 +400,10 @@ struct QNNVar {
     return StatusCode::SUCCESS;
   }
 
+  /**
+   * @brief Retrieve the QNN graph handle for graphName from the context
+   * already loaded from bin_path.
+   */
   qnn_wrapper_api::GraphInfo_t *graphRetrieve(std::string bin_path,
                                               std::string graphName) {
 
@@ -406,6 +445,10 @@ struct QNNVar {
     return graphInfo;
   }
 
+  /**
+   * @brief Dump every profiling event (and its sub-events) recorded on the
+   * backend profile handle.
+   */
   StatusCode extractBackendProfilingInfo() {
     Qnn_ProfileHandle_t profileHandle = m_profileBackendHandle;
 
@@ -429,6 +472,9 @@ struct QNNVar {
     return StatusCode::SUCCESS;
   }
 
+  /**
+   * @brief Recursively dump the sub-events of a profiling event.
+   */
   StatusCode extractProfilingSubEvents(QnnProfile_EventId_t profileEventId) {
     const QnnProfile_EventId_t *profileSubEvents{nullptr};
     uint32_t numSubEvents{0};
@@ -447,6 +493,9 @@ struct QNNVar {
     return StatusCode::SUCCESS;
   }
 
+  /**
+   * @brief Log a single profiling event's type/value/identifier/unit.
+   */
   StatusCode extractProfilingEvent(QnnProfile_EventId_t profileEventId) {
     QnnProfile_EventData_t eventData;
     if (QNN_PROFILE_NO_ERROR !=
@@ -462,6 +511,9 @@ struct QNNVar {
     return StatusCode::SUCCESS;
   }
 
+  /**
+   * @brief mmap a QNN context binary file read-only into buffer.
+   */
   bool mmapBinaryFile(std::string filePath, void **buffer, size_t bufferSize) {
     int fd = open(filePath.c_str(), O_RDONLY);
     int OFFSET = 0;
@@ -476,9 +528,20 @@ struct QNNVar {
   }
 };
 
+/**
+ * @brief ContextData wrapper that owns the QNNVar shared by a QNNContext
+ * instance and every QNNGraph layer created under it.
+ */
 class QNNBackendVar : public ContextData {
 public:
+  /**
+   * @brief     Default constructor
+   */
   QNNBackendVar() : data(std::make_shared<QNNVar>()) {}
+
+  /**
+   * @brief     Access the shared QNNVar.
+   */
   std::shared_ptr<QNNVar> &getVar() { return data; }
 
 private:

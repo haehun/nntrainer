@@ -38,6 +38,10 @@ std::chrono::duration<double> exec_seconds;
 
 namespace nntrainer {
 
+/**
+ * @brief Fetch the shared QNN backend state (device/context/profiling
+ * handles) from a layer's run context.
+ */
 std::shared_ptr<QNNVar> getQNNVar(RunLayerContext &context) {
   std::shared_ptr<QNNVar> qc_var =
     (std::static_pointer_cast<QNNBackendVar>(context.getContextData()))

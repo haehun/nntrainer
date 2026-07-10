@@ -26,10 +26,20 @@ namespace nntrainer {
  */
 class QNNGraph : public LayerImpl {
 public:
+  /** @brief Variant over the raw tensor buffer pointer types QNNGraph can
+   * bind as QNN graph input/output. */
   using BufferTypePtr =
     std::variant<std::monostate, uint8_t *, uint16_t *, float *>;
 
+  /**
+   * @brief     Constructor of QNNGraph
+   */
   QNNGraph();
+
+  /**
+   * @brief     Destructor of QNNGraph. Frees the QNN graph context and, if
+   * this was the last user, the cached context entry for its binary path.
+   */
   ~QNNGraph();
 
   inline static const std::string type = "qnn_graph";
@@ -65,18 +75,36 @@ public:
    */
   void setProperty(const std::vector<std::string> &values) override;
 
+  /**
+   * @brief Deserialize (or reuse the cached) QNN context binary for this
+   * graph's bin_path.
+   */
   StatusCode makeContext(RunLayerContext &context);
 
+  /**
+   * @brief Free the QNN graph context created by makeContext().
+   */
   StatusCode freeContext(RunLayerContext &context);
 
+  /**
+   * @copydoc Layer::read()
+   */
   void read(std::ifstream &file, RunLayerContext &run_context, bool opt_var,
             ml::train::ExecutionMode mode, bool trainable,
             TensorDim::DataType defineWeightDataType, bool fsu = false,
             size_t start_offset = 0, bool read_from_offset = false,
             int file_fd = -1) override;
 
+  /**
+   * @brief Append a BufferTypePtr for T to buffers, tagged by T's data type
+   * (UINT4/UINT8, UINT16, or FP32) so it can be bound to a QNN tensor.
+   */
   void updateBufferType(std::vector<BufferTypePtr> &buffers, Tensor &T);
 
+  /**
+   * @brief Populate and register QNN tensor T with the given buffer,
+   * dispatching on the buffer's held pointer type.
+   */
   void populateTensor(std::shared_ptr<QNNVar> qc_var,
                       Qnn_Context_Graph_t &context_i, BufferTypePtr buffer,
                       Qnn_Tensor_t *T);

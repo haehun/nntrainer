@@ -23,6 +23,10 @@
 
 namespace nntrainer {
 
+/**
+ * @brief Resolve symbol sym from libHandle as function pointer type T,
+ * logging (but not throwing) if it cannot be found.
+ */
 template <class T>
 static inline T resolveSymbol(void *libHandle, const char *sym) {
   T ptr = (T)pal::dynamicloading::dlSym(libHandle, sym);

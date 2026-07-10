@@ -48,6 +48,9 @@ namespace nntrainer {
 
 static std::string g_default_backend_ext_config_path;
 
+/**
+ * @brief Strip trailing '/' characters from a path, keeping a lone "/".
+ */
 static std::string trim_trailing_slashes(std::string path) {
   while (path.size() > 1 && path.back() == '/') {
     path.pop_back();
@@ -55,10 +58,18 @@ static std::string trim_trailing_slashes(std::string path) {
   return path;
 }
 
+/**
+ * @brief True if path is a POSIX absolute path (starts with '/').
+ */
 static bool is_absolute_path(const std::string &path) {
   return !path.empty() && path[0] == '/';
 }
 
+/**
+ * @brief Resolve the QuickDotAI base directory: the QUICK_DOT_AI_BASE_DIR
+ * env override if set, else the current working directory, else a hardcoded
+ * fallback path.
+ */
 static std::string resolve_quick_dot_ai_base_dir() {
   const char *override_base_dir = std::getenv("QUICK_DOT_AI_BASE_DIR");
   if (override_base_dir != nullptr && override_base_dir[0] != '\0') {
@@ -82,6 +93,10 @@ static std::string resolve_quick_dot_ai_base_dir() {
   return fallback;
 }
 
+/**
+ * @brief Resolve a possibly-relative backend extension config path against
+ * the QuickDotAI base directory; absolute or empty paths are returned as-is.
+ */
 static std::string
 resolve_backend_extensions_config_value(const std::string &path) {
   if (path.empty() || is_absolute_path(path)) {
@@ -90,6 +105,11 @@ resolve_backend_extensions_config_value(const std::string &path) {
   return resolve_quick_dot_ai_base_dir() + "/" + path;
 }
 
+/**
+ * @brief Resolve the backend extensions config file path: the
+ * QUICK_DOT_AI_QNN_BACKEND_EXT_CONFIG_PATH env override if set, else the
+ * default file name under the QuickDotAI base directory.
+ */
 static std::string resolve_backend_extensions_config_path() {
   const char *override_config_path =
     std::getenv("QUICK_DOT_AI_QNN_BACKEND_EXT_CONFIG_PATH");

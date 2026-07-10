@@ -24,6 +24,10 @@ using namespace qnn::tools::iotensor;
 /** @brief Wraps QNN IO tensor allocation and teardown without copying data. */
 class IOTensorWrapper {
 public:
+  /**
+   * @brief Allocate and deep-copy QNN input/output tensor descriptors from
+   * graphInfo, tearing down whatever was already allocated on failure.
+   */
   StatusCode
   setupInputAndOutputTensors(Qnn_Tensor_t **inputs, Qnn_Tensor_t **outputs,
                              qnn_wrapper_api::GraphInfo_t graphInfo) {
@@ -58,6 +62,11 @@ public:
     return returnStatus;
   }
 
+  /**
+   * @brief Copy a uint8_t source buffer into QNN input tensor input,
+   * quantizing from float first if inputDataType is FLOAT but input expects
+   * a non-float native type.
+   */
   StatusCode populateInputTensor(uint8_t *buffer, Qnn_Tensor_t *input,
                                  InputDataType inputDataType) {
     if (nullptr == input) {
@@ -90,6 +99,11 @@ public:
     return StatusCode::SUCCESS;
   }
 
+  /**
+   * @brief Copy a uint16_t source buffer into QNN input tensor input,
+   * quantizing from float first if inputDataType is FLOAT but input expects
+   * a non-float native type.
+   */
   StatusCode populateInputTensor(uint16_t *buffer, Qnn_Tensor_t *input,
                                  InputDataType inputDataType) {
     if (nullptr == input) {
@@ -125,6 +139,11 @@ public:
     return StatusCode::SUCCESS;
   }
 
+  /**
+   * @brief Copy a float source buffer into QNN input tensor input,
+   * quantizing it first if inputDataType is FLOAT but input expects a
+   * non-float native type.
+   */
   StatusCode populateInputTensor(float *buffer, Qnn_Tensor_t *input,
                                  InputDataType inputDataType) {
     if (nullptr == input) {
@@ -158,6 +177,10 @@ public:
   }
 
 private:
+  /**
+   * @brief Allocate tensors and deep-copy tensorWrappers' descriptors into
+   * it, without copying any tensor data.
+   */
   StatusCode setupTensorsNoCopy(Qnn_Tensor_t **tensors, uint32_t tensorCount,
                                 Qnn_Tensor_t *tensorWrappers) {
     if (nullptr == tensorWrappers) {
@@ -199,7 +222,10 @@ private:
     return returnStatus;
   }
 
-  // Clean up all tensors related data after execution.
+  /**
+   * @brief Free the dimensions and client buffer owned by each tensor, then
+   * free the tensors array itself.
+   */
   StatusCode tearDownTensors(Qnn_Tensor_t *tensors, uint32_t tensorCount) {
     for (size_t tensorIdx = 0; tensorIdx < tensorCount; tensorIdx++) {
       QNN_DEBUG("freeing resources for tensor: %d", tensorIdx);
@@ -216,6 +242,9 @@ private:
     return StatusCode::SUCCESS;
   }
 
+  /**
+   * @brief Copy the first rank entries of inDimensions into dims.
+   */
   StatusCode fillDims(std::vector<size_t> &dims, uint32_t *inDimensions,
                       uint32_t rank) {
     if (nullptr == inDimensions) {
@@ -228,8 +257,10 @@ private:
     return StatusCode::SUCCESS;
   }
 
-  // Helper method to copy a float buffer, quantize it, and copy
-  // it to a tensor (Qnn_Tensor_t) buffer.
+  /**
+   * @brief Quantize/cast floatBuffer into tensor's native client buffer type,
+   * dispatching on tensor's QNN data type.
+   */
   StatusCode copyFromFloatToNative(float *floatBuffer, Qnn_Tensor_t *tensor) {
     if (nullptr == floatBuffer || nullptr == tensor) {
       QNN_ERROR("copyFromFloatToNative(): received a nullptr");

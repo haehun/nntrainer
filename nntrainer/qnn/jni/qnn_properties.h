@@ -51,11 +51,17 @@ public:
 
 } // namespace props
 
+/**
+ * @copydoc template <typename Tag, typename DataType> struct str_converter
+ */
 template <>
 std::string str_converter<props::quant_param_prop_tag,
                           std::pair<std::string, std::pair<float, int>>>::
   to_string(const std::pair<std::string, std::pair<float, int>> &quant_param);
 
+/**
+ * @copydoc template <typename Tag, typename DataType> struct str_converter
+ */
 template <>
 std::pair<std::string, std::pair<float, int>>
 str_converter<props::quant_param_prop_tag,

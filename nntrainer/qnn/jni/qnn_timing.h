@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 /**
+ * Copyright (C) 2026 Haehun Yang <haehun.yang@samsung.com>
+ *
  * @file    qnn_timing.h
+ * @date    10 Jul 2026
+ * @see     https://github.com/nntrainer/nntrainer
+ * @author  Haehun Yang <haehun.yang@samsung.com>
+ * @bug     No known bugs except for NYI items
  * @brief   Lightweight wall-clock timing helpers for QNN initialization
  *          profiling. All elapsed times are logged in milliseconds under the
  *          "QNN-INIT" tag so they can be filtered with `logcat | grep QNN-INIT`
@@ -36,7 +42,8 @@
 namespace nntrainer {
 
 /**
- * @brief Elapsed milliseconds since @a since, as a long long for %lld logging.
+ * @brief Milliseconds elapsed since the given time point, as a long long for
+ * %lld logging.
  */
 inline long long
 qnn_ms_since(const std::chrono::steady_clock::time_point &since) {

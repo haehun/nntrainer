@@ -83,6 +83,10 @@ public:
    */
   QNNContext() : Context(std::make_shared<QNNBackendVar>()) {}
 
+  /**
+   * @brief   Destructor. Frees all cached QNN contexts, tears down the QNN
+   * backend, and closes the backend library handle.
+   */
   ~QNNContext() {
     auto qnn_data = getQnnData();
     // Free all remaining QNN contexts in ct_map before releasing backend
@@ -103,6 +107,9 @@ public:
     }
   }
 
+  /**
+   * @copydoc Context::init()
+   */
   int init() override;
 
   /**
@@ -239,20 +246,37 @@ public:
    */
   static void setDefaultBackendExtConfigPath(const std::string &path);
 
+  /**
+   * @brief   Set the backend extension config path for this instance,
+   * overriding the process-wide default set via
+   * setDefaultBackendExtConfigPath().
+   */
   void setBackendExtConfigPath(const std::string &path) {
     m_backendExtConfigPath = path;
   }
 
+  /**
+   * @brief   Set the Mem Allocator object
+   *
+   * @param mem Memory allocator object
+   */
   void setMemAllocator(std::shared_ptr<QNNRpcManager> mem) {
     getContextData()->setMemAllocator(mem);
   }
 
+  /**
+   * @brief   Get the shared QNN backend state (device/context/profiling
+   * handles) associated with this context.
+   */
   std::shared_ptr<QNNVar> getQnnData() {
     std::shared_ptr<QNNBackendVar> d =
       std::static_pointer_cast<QNNBackendVar>(this->getContextData());
     return d->getVar();
   }
 
+  /**
+   * @copydoc Context::load(const std::string &file_path)
+   */
   int load(const std::string &file_path) override {
 
     StatusCode ret = getQnnData()->makeContext(file_path);
@@ -260,6 +284,9 @@ public:
   }
 
 private:
+  /**
+   * @brief   Overriden initialization function
+   */
   void initialize() noexcept override;
 
   // flag to check predefined qnn context is resistered
@@ -290,6 +317,10 @@ private:
 
   bool m_isContextCreated;
 
+  /**
+   * @brief Free a graphs-info array and everything it owns (graph names,
+   * input/output tensors), then null out the caller's pointer.
+   */
   static StatusCode
   QnnModel_freeGraphsInfo(qnn_wrapper_api::GraphInfoPtr_t **graphsInfo,
                           uint32_t numGraphsInfo) {
@@ -313,18 +344,39 @@ private:
     return StatusCode::SUCCESS;
   }
 
+  /**
+   * @brief Check whether the backend supports the device property group.
+   */
   StatusCode isDevicePropertySupported();
 
+  /**
+   * @brief Create the QNN device handle used for backend execution.
+   */
   StatusCode createDevice();
 
+  /**
+   * @brief Map a QNN error code to the corresponding StatusCode.
+   */
   StatusCode verifyFailReturnStatus(Qnn_ErrorHandle_t errCode);
 
+  /**
+   * @brief Create the QNN profile handle if profiling is enabled.
+   */
   StatusCode initializeProfiling();
 
+  /**
+   * @brief Register each configured custom op package with the backend.
+   */
   StatusCode registerOpPackages();
 
+  /**
+   * @brief Release device resources acquired during init().
+   */
   void release();
 
+  /**
+   * @brief Free the QNN device handle created by createDevice().
+   */
   StatusCode freeDevice();
 };
 
