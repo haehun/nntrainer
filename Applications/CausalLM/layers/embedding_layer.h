@@ -86,11 +86,11 @@ public:
   MappedBytes(const MappedBytes &) = delete;
   MappedBytes &operator=(const MappedBytes &) = delete;
 
-  /// mmap @a path read-only (falls back to a full read on Windows / empty
-  /// file). Throws std::runtime_error on open/map failure.
+  /// mmap the file at path read-only (falls back to a full read on Windows /
+  /// empty file). Throws std::runtime_error on open/map failure.
   static MappedBytes mapFile(const std::string &path);
   /// Take ownership of an already in-memory buffer.
-  static MappedBytes fromVector(std::vector<uint8_t> data);
+  static MappedBytes fromVector(std::vector<uint8_t> &&data);
 
   const uint8_t *data() const { return ptr_; }
   size_t size() const { return size_; }
@@ -252,6 +252,9 @@ public:
   inline static const std::string type = "embedding_layer";
 
 private:
+  /**
+   * @brief Gather embeddings for tokens [from, to) from the sidecar LUT.
+   */
   void forwardSidecarLut(nntrainer::RunLayerContext &context, unsigned int from,
                          unsigned int to);
 

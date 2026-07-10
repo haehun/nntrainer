@@ -50,10 +50,18 @@ namespace {
 std::mutex quant_lut_cache_mutex;
 std::unordered_map<std::string, std::weak_ptr<QuantLut>> quant_lut_cache;
 
+/**
+ * @brief True if the given path has a ".json" extension (i.e. a LUT
+ * manifest rather than a raw UINT16 LUT file).
+ */
 bool hasJsonExtension(const std::string &path) {
   return std::filesystem::path(path).extension() == ".json";
 }
 
+/**
+ * @brief Resolve a LUT path referenced from a JSON manifest, treating it as
+ * relative to the manifest's directory unless it is already absolute.
+ */
 std::filesystem::path resolveLutPath(const std::string &manifest_path,
                                      const std::string &lut_path) {
   std::filesystem::path path(lut_path);
@@ -63,6 +71,10 @@ std::filesystem::path resolveLutPath(const std::string &manifest_path,
   return std::filesystem::path(manifest_path).parent_path() / path;
 }
 
+/**
+ * @brief Fetch an object-typed field from a LUT manifest, throwing
+ * std::runtime_error if it is missing or not an object.
+ */
 const nlohmann::json &requireJsonObjectField(const nlohmann::json &json,
                                              const char *field,
                                              const std::string &path) {
@@ -73,6 +85,10 @@ const nlohmann::json &requireJsonObjectField(const nlohmann::json &json,
   return json.at(field);
 }
 
+/**
+ * @brief Fetch a string-typed field from a LUT manifest, throwing
+ * std::runtime_error if it is missing or not a string.
+ */
 std::string requireJsonStringField(const nlohmann::json &json,
                                    const char *field, const std::string &path) {
   NNTR_THROW_IF(!json.contains(field) || !json.at(field).is_string(),
@@ -82,6 +98,10 @@ std::string requireJsonStringField(const nlohmann::json &json,
   return json.at(field).get<std::string>();
 }
 
+/**
+ * @brief Fetch a numeric field from a LUT manifest as a float, throwing
+ * std::runtime_error if it is missing or not a number.
+ */
 float requireJsonFloatField(const nlohmann::json &json, const char *field,
                             const std::string &path) {
   NNTR_THROW_IF(!json.contains(field) || !json.at(field).is_number(),
@@ -91,6 +111,10 @@ float requireJsonFloatField(const nlohmann::json &json, const char *field,
   return json.at(field).get<float>();
 }
 
+/**
+ * @brief Fetch an integer field from a LUT manifest, throwing
+ * std::runtime_error if it is missing, not an integer, or out of int range.
+ */
 int requireJsonIntField(const nlohmann::json &json, const char *field,
                         const std::string &path) {
   NNTR_THROW_IF(!json.contains(field) || !(json.at(field).is_number_integer() ||
@@ -108,6 +132,10 @@ int requireJsonIntField(const nlohmann::json &json, const char *field,
   return static_cast<int>(value);
 }
 
+/**
+ * @brief Fetch a positive integer field from a LUT manifest as a size_t,
+ * throwing if it is missing, not an integer, or not positive.
+ */
 size_t requireJsonSizeField(const nlohmann::json &json, const char *field,
                             const std::string &path) {
   NNTR_THROW_IF(!json.contains(field) || !(json.at(field).is_number_integer() ||
@@ -123,6 +151,10 @@ size_t requireJsonSizeField(const nlohmann::json &json, const char *field,
   return static_cast<size_t>(value);
 }
 
+/**
+ * @brief Derive lut's in_dim from its packed 4-bit byte buffer size and
+ * out_dim, throwing if the manifest is inconsistent.
+ */
 void derivePacked4BitDimensions(QuantLut &lut,
                                 const std::string &manifest_path) {
   NNTR_THROW_IF(lut.out_dim == 0, std::invalid_argument)
@@ -143,6 +175,10 @@ void derivePacked4BitDimensions(QuantLut &lut,
     << "LUT binary has no rows: " << manifest_path;
 }
 
+/**
+ * @brief Load a "ufixed8" (unsigned, single shared scale/offset) packed
+ * 4-bit LUT described by a JSON manifest.
+ */
 std::shared_ptr<QuantLut> loadUfixed8Manifest(const std::string &manifest_path,
                                               const nlohmann::json &json) {
   const auto lut_path = requireJsonStringField(json, "lut-path", manifest_path);
@@ -162,6 +198,10 @@ std::shared_ptr<QuantLut> loadUfixed8Manifest(const std::string &manifest_path,
   return lut;
 }
 
+/**
+ * @brief Load a "sfixed4" (signed, per-row scale) packed 4-bit LUT
+ * described by a JSON manifest.
+ */
 std::shared_ptr<QuantLut> loadSfixed4Manifest(const std::string &manifest_path,
                                               const nlohmann::json &json) {
   const auto lut_path = requireJsonStringField(json, "lut-path", manifest_path);
@@ -196,6 +236,10 @@ std::shared_ptr<QuantLut> loadSfixed4Manifest(const std::string &manifest_path,
   return lut;
 }
 
+/**
+ * @brief Load a sidecar LUT from a JSON manifest file, dispatching on its
+ * "datatype" field ("ufixed8" by default, or "sfixed4").
+ */
 std::shared_ptr<QuantLut> loadJsonManifest(const std::string &manifest_path) {
   std::ifstream file(manifest_path);
   NNTR_THROW_IF(!file.is_open(), std::runtime_error)
@@ -230,6 +274,10 @@ std::shared_ptr<QuantLut> loadJsonManifest(const std::string &manifest_path) {
   return nullptr;
 }
 
+/**
+ * @brief Load a headerless raw UINT16 LUT file, validating its size against
+ * the caller-supplied in_dim/out_dim hints.
+ */
 std::shared_ptr<QuantLut> loadRawU16(const std::string &path,
                                      size_t in_dim_hint, size_t out_dim_hint) {
   NNTR_THROW_IF(in_dim_hint == 0 || out_dim_hint == 0, std::invalid_argument)
@@ -254,6 +302,10 @@ std::shared_ptr<QuantLut> loadRawU16(const std::string &path,
   return lut;
 }
 
+/**
+ * @brief Throw std::invalid_argument if lut's in_dim/out_dim differ from
+ * the caller-supplied hints (a hint of 0 skips that check).
+ */
 void validateHintedDimensions(const QuantLut &lut, const std::string &path,
                               size_t in_dim_hint, size_t out_dim_hint) {
   NNTR_THROW_IF(in_dim_hint != 0 && lut.in_dim != in_dim_hint,
@@ -266,12 +318,20 @@ void validateHintedDimensions(const QuantLut &lut, const std::string &path,
     << ", file has " << lut.out_dim;
 }
 
+/**
+ * @brief Decode a 4-bit two's-complement nibble to its signed integer value
+ * in the range [-8, 7].
+ */
 int decodeSigned4(uint8_t nibble) {
   nibble &= 0x0fU;
   return (nibble & 0x08U) ? static_cast<int>(nibble) - 16
                           : static_cast<int>(nibble);
 }
 
+/**
+ * @brief Saturate a float to the UINT16 range, mapping non-finite and
+ * out-of-range values to 0 or UINT16_MAX.
+ */
 uint16_t clampFloatToU16(float value) {
   if (!std::isfinite(value))
     return value > 0.0f ? std::numeric_limits<uint16_t>::max() : 0;
@@ -283,6 +343,10 @@ uint16_t clampFloatToU16(float value) {
   return static_cast<uint16_t>(value);
 }
 
+/**
+ * @brief Saturate an already-rounded double to the UINT16 range, mapping
+ * non-finite and out-of-range values to 0 or UINT16_MAX.
+ */
 uint16_t clampRoundedToU16(double value) {
   if (!std::isfinite(value))
     return value > 0.0 ? std::numeric_limits<uint16_t>::max() : 0;
@@ -294,6 +358,10 @@ uint16_t clampRoundedToU16(double value) {
   return static_cast<uint16_t>(value);
 }
 
+/**
+ * @brief Validate that token_idx is within lut's in_dim and output_len
+ * matches lut's out_dim before decoding a row.
+ */
 void validateDecodeArgs(const QuantLut &lut, size_t token_idx,
                         size_t output_len) {
   NNTR_THROW_IF(token_idx >= lut.in_dim, std::invalid_argument)
@@ -303,6 +371,11 @@ void validateDecodeArgs(const QuantLut &lut, size_t token_idx,
     << lut.out_dim;
 }
 
+/**
+ * @brief Dequantize one 4-bit nibble of token_idx's row to a float, scaled
+ * by layer_scale (per-row scale for sfixed4, shared scale/offset for
+ * ufixed8).
+ */
 float decodePacked4BitValue(const QuantLut &lut, size_t token_idx,
                             uint8_t nibble, float layer_scale) {
   if (lut.is_signed4) {
@@ -316,6 +389,10 @@ float decodePacked4BitValue(const QuantLut &lut, size_t token_idx,
          lut.scale * layer_scale;
 }
 
+/**
+ * @brief Decode one packed 4-bit LUT row into a floating-point output
+ * buffer of type T (float or _FP16).
+ */
 template <typename T>
 void decodePacked4BitRowToFloatType(const QuantLut &lut, size_t token_idx,
                                     float layer_scale, T *output,
@@ -378,7 +455,7 @@ MappedBytes &MappedBytes::operator=(MappedBytes &&other) noexcept {
   return *this;
 }
 
-MappedBytes MappedBytes::fromVector(std::vector<uint8_t> data) {
+MappedBytes MappedBytes::fromVector(std::vector<uint8_t> &&data) {
   MappedBytes m;
   m.owned_ = std::move(data);
   m.ptr_ = m.owned_.data();
