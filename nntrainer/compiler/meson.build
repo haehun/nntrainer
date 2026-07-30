@@ -11,6 +11,7 @@ compiler_sources = [
   'bn_realizer.cpp',
   'tflite_export_realizer.cpp',
   'no_op_optimizer.cpp',
+  'identity_remove_optimizer.cpp',
 ]
 
 compiler_headers = [

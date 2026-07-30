@@ -16,6 +16,7 @@
 
 #include <flatten_realizer.h>
 #include <graph_optimizer.h>
+#include <identity_remove_optimizer.h>
 #include <no_op_optimizer.h>
 #include <realizer.h>
 
@@ -36,6 +37,26 @@ static void optimizeAndEqual(GraphOptimizer &optimizer,
                              const std::vector<LayerRepresentation> &expected) {
   auto processed = optimizer.optimize(makeGraph(input));
   auto expected_graph = makeGraph(expected);
+  graphEqual(processed, expected_graph);
+}
+
+/**
+ * @brief compile then check optimize and equal
+ * @note output connections are only populated by NetworkGraph::compile(), so a
+ * pass that inspects getNumOutputConnections() has to be tested on a compiled
+ * graph
+ *
+ * @param optimizer optimizer to use
+ * @param input input
+ * @param expected expected output
+ */
+static void
+compileAndOptimizeAndEqual(GraphOptimizer &optimizer,
+                           const std::vector<LayerRepresentation> &input,
+                           const std::vector<LayerRepresentation> &expected) {
+  std::vector<std::unique_ptr<GraphRealizer>> realizers;
+  auto processed = optimizer.optimize(makeCompiledGraph(input, realizers));
+  auto expected_graph = makeCompiledGraph(expected, realizers);
   graphEqual(processed, expected_graph);
 }
 
@@ -87,6 +108,93 @@ TEST(NoOpOptimizer, nodes_are_shared_p) {
   for (unsigned int i = 0; i < reference.size(); ++i) {
     EXPECT_EQ(optimized[i].get(), reference[i].get());
   }
+}
+
+TEST(IdentityRemoveOptimizer, type_p) {
+  IdentityRemoveOptimizer opt;
+  EXPECT_EQ(opt.getType(), "remove_identity");
+}
+
+TEST(IdentityRemoveOptimizer, remove_single_identity_p) {
+  std::vector<LayerRepresentation> before = {
+    {"fully_connected", {"name=fc1"}},
+    {"identity", {"name=id1", "input_layers=fc1"}},
+    {"fully_connected", {"name=fc2", "input_layers=id1"}},
+  };
+  std::vector<LayerRepresentation> after = {
+    {"fully_connected", {"name=fc1"}},
+    {"fully_connected", {"name=fc2", "input_layers=fc1"}},
+  };
+
+  IdentityRemoveOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, before, after));
+}
+
+TEST(IdentityRemoveOptimizer, remove_consecutive_identity_p) {
+  std::vector<LayerRepresentation> before = {
+    {"fully_connected", {"name=fc1"}},
+    {"identity", {"name=id1", "input_layers=fc1"}},
+    {"identity", {"name=id2", "input_layers=id1"}},
+    {"activation", {"name=ac1", "activation=relu", "input_layers=id2"}},
+    {"fully_connected", {"name=fc2", "input_layers=ac1"}},
+  };
+  std::vector<LayerRepresentation> after = {
+    {"fully_connected", {"name=fc1"}},
+    {"activation", {"name=ac1", "activation=relu", "input_layers=fc1"}},
+    {"fully_connected", {"name=fc2", "input_layers=ac1"}},
+  };
+
+  IdentityRemoveOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, before, after));
+}
+
+/**
+ * @brief a terminal identity may be the model's designated output, so it must
+ * survive the pass
+ *
+ */
+TEST(IdentityRemoveOptimizer, keep_terminal_identity_p) {
+  std::vector<LayerRepresentation> graph = {
+    {"fully_connected", {"name=fc1"}},
+    {"identity", {"name=id_out", "input_layers=fc1"}},
+  };
+
+  IdentityRemoveOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, graph, graph));
+}
+
+/**
+ * @brief an identity consumed by more than one node is not spliced by this
+ * pass
+ *
+ */
+TEST(IdentityRemoveOptimizer, keep_fanned_out_identity_p) {
+  std::vector<LayerRepresentation> graph = {
+    {"fully_connected", {"name=fc1"}},
+    {"identity", {"name=id1", "input_layers=fc1"}},
+    {"fully_connected", {"name=fc2", "input_layers=id1"}},
+    {"fully_connected", {"name=fc3", "input_layers=id1"}},
+    {"addition", {"name=add1", "input_layers=fc2,fc3"}},
+  };
+
+  IdentityRemoveOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, graph, graph));
+}
+
+TEST(IdentityRemoveOptimizer, no_identity_is_noop_p) {
+  std::vector<LayerRepresentation> graph = {
+    {"fully_connected", {"name=fc1"}},
+    {"activation", {"name=ac1", "activation=relu", "input_layers=fc1"}},
+    {"fully_connected", {"name=fc2", "input_layers=ac1"}},
+  };
+
+  IdentityRemoveOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, graph, graph));
+}
+
+TEST(IdentityRemoveOptimizer, empty_graph_p) {
+  IdentityRemoveOptimizer opt;
+  EXPECT_NO_THROW(optimizeAndEqual(opt, {}, {}));
 }
 
 /**
