@@ -10,10 +10,6 @@ compiler_sources = [
   'multiout_realizer.cpp',
   'bn_realizer.cpp',
   'tflite_export_realizer.cpp',
-  'no_op_optimizer.cpp',
-  'optimizer_utils.cpp',
-  'identity_remove_optimizer.cpp',
-  'reshape_fold_optimizer.cpp',
 ]
 
 compiler_headers = [

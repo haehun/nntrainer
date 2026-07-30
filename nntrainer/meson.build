@@ -43,6 +43,7 @@ endif
 
 nntrainer_elements = [
   'compiler',
+  'compiler/optimizer',
   'schema',
   'dataset',
   'layers',

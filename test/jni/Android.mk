@@ -26,6 +26,7 @@ NNTRAINER_INCLUDES := $(NNTRAINER_ROOT)/nntrainer \
 	$(NNTRAINER_ROOT)/nntrainer/models \
 	$(NNTRAINER_ROOT)/nntrainer/layers \
 	$(NNTRAINER_ROOT)/nntrainer/compiler \
+	$(NNTRAINER_ROOT)/nntrainer/compiler/optimizer \
 	$(NNTRAINER_ROOT)/nntrainer/graph \
 	$(NNTRAINER_ROOT)/nntrainer/optimizers \
 	$(NNTRAINER_ROOT)/nntrainer/tensor \
@@ -504,6 +505,7 @@ LOCAL_SRC_FILES := \
      ../unittest/compiler/compiler_test_util.cpp \
      ../unittest/compiler/unittest_compiler.cpp \
      ../unittest/compiler/unittest_realizer.cpp \
+     ../unittest/compiler/unittest_graph_optimizer.cpp \
 
 LOCAL_C_INCLUDES += $(NNTRAINER_INCLUDES)
 
