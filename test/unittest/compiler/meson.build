@@ -5,6 +5,7 @@ test_target = [
   'unittest_compiler.cpp',
   'unittest_interpreter.cpp',
   'unittest_realizer.cpp',
+  'unittest_graph_optimizer.cpp',
 ]
 
 if get_option('enable-tflite-interpreter')
