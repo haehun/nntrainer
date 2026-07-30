@@ -19,6 +19,7 @@
 #include <identity_remove_optimizer.h>
 #include <no_op_optimizer.h>
 #include <realizer.h>
+#include <reshape_fold_optimizer.h>
 
 #include <compiler_test_util.h>
 #include <nntrainer_test_util.h>
@@ -194,6 +195,96 @@ TEST(IdentityRemoveOptimizer, no_identity_is_noop_p) {
 
 TEST(IdentityRemoveOptimizer, empty_graph_p) {
   IdentityRemoveOptimizer opt;
+  EXPECT_NO_THROW(optimizeAndEqual(opt, {}, {}));
+}
+
+TEST(ReshapeFoldOptimizer, type_p) {
+  ReshapeFoldOptimizer opt;
+  EXPECT_EQ(opt.getType(), "fold_reshape");
+}
+
+TEST(ReshapeFoldOptimizer, fold_two_reshapes_p) {
+  std::vector<LayerRepresentation> before = {
+    {"input", {"name=in", "input_shape=1:2:4"}},
+    {"reshape", {"name=rs1", "target_shape=1:4:2", "input_layers=in"}},
+    {"reshape", {"name=rs2", "target_shape=1:1:8", "input_layers=rs1"}},
+    {"fully_connected", {"name=fc1", "unit=2", "input_layers=rs2"}},
+  };
+  std::vector<LayerRepresentation> after = {
+    {"input", {"name=in", "input_shape=1:2:4"}},
+    {"reshape", {"name=rs2", "target_shape=1:1:8", "input_layers=in"}},
+    {"fully_connected", {"name=fc1", "unit=2", "input_layers=rs2"}},
+  };
+
+  ReshapeFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, before, after));
+}
+
+TEST(ReshapeFoldOptimizer, fold_reshape_run_p) {
+  std::vector<LayerRepresentation> before = {
+    {"input", {"name=in", "input_shape=1:2:4"}},
+    {"reshape", {"name=rs1", "target_shape=1:4:2", "input_layers=in"}},
+    {"reshape", {"name=rs2", "target_shape=1:8:1", "input_layers=rs1"}},
+    {"reshape", {"name=rs3", "target_shape=1:1:8", "input_layers=rs2"}},
+    {"fully_connected", {"name=fc1", "unit=2", "input_layers=rs3"}},
+  };
+  std::vector<LayerRepresentation> after = {
+    {"input", {"name=in", "input_shape=1:2:4"}},
+    {"reshape", {"name=rs3", "target_shape=1:1:8", "input_layers=in"}},
+    {"fully_connected", {"name=fc1", "unit=2", "input_layers=rs3"}},
+  };
+
+  ReshapeFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, before, after));
+}
+
+TEST(ReshapeFoldOptimizer, keep_isolated_reshape_p) {
+  std::vector<LayerRepresentation> graph = {
+    {"input", {"name=in", "input_shape=1:2:4"}},
+    {"reshape", {"name=rs1", "target_shape=1:1:8", "input_layers=in"}},
+    {"fully_connected", {"name=fc1", "unit=2", "input_layers=rs1"}},
+  };
+
+  ReshapeFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, graph, graph));
+}
+
+/**
+ * @brief a reshape observed by another consumer as well is not folded away
+ *
+ */
+TEST(ReshapeFoldOptimizer, keep_fanned_out_reshape_p) {
+  std::vector<LayerRepresentation> graph = {
+    {"input", {"name=in", "input_shape=1:2:4"}},
+    {"reshape", {"name=rs1", "target_shape=1:4:2", "input_layers=in"}},
+    {"reshape", {"name=rs2", "target_shape=1:1:8", "input_layers=rs1"}},
+    {"fully_connected", {"name=fc1", "unit=8", "input_layers=rs1"}},
+    {"addition", {"name=add1", "input_layers=rs2,fc1"}},
+  };
+
+  ReshapeFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, graph, graph));
+}
+
+/**
+ * @brief flatten computes its target shape from its input during finalize(),
+ * so it is not interchangeable with reshape and must survive
+ *
+ */
+TEST(ReshapeFoldOptimizer, keep_flatten_p) {
+  std::vector<LayerRepresentation> graph = {
+    {"input", {"name=in", "input_shape=1:2:4"}},
+    {"flatten", {"name=ft1", "input_layers=in"}},
+    {"reshape", {"name=rs1", "target_shape=1:1:8", "input_layers=ft1"}},
+    {"fully_connected", {"name=fc1", "unit=2", "input_layers=rs1"}},
+  };
+
+  ReshapeFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, graph, graph));
+}
+
+TEST(ReshapeFoldOptimizer, empty_graph_p) {
+  ReshapeFoldOptimizer opt;
   EXPECT_NO_THROW(optimizeAndEqual(opt, {}, {}));
 }
 
