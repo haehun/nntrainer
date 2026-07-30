@@ -3,6 +3,7 @@ optimizer_sources = [
   'no_op_optimizer.cpp',
   'identity_remove_optimizer.cpp',
   'reshape_fold_optimizer.cpp',
+  'concat_fold_optimizer.cpp',
 ]
 
 foreach s : optimizer_sources

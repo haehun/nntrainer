@@ -14,12 +14,15 @@
 #include <memory>
 #include <vector>
 
+#include <concat_fold_optimizer.h>
 #include <flatten_realizer.h>
 #include <graph_optimizer.h>
 #include <identity_remove_optimizer.h>
 #include <no_op_optimizer.h>
 #include <realizer.h>
 #include <reshape_fold_optimizer.h>
+
+#include <network_graph.h>
 
 #include <compiler_test_util.h>
 #include <nntrainer_test_util.h>
@@ -286,6 +289,222 @@ TEST(ReshapeFoldOptimizer, keep_flatten_p) {
 TEST(ReshapeFoldOptimizer, empty_graph_p) {
   ReshapeFoldOptimizer opt;
   EXPECT_NO_THROW(optimizeAndEqual(opt, {}, {}));
+}
+
+TEST(ConcatFoldOptimizer, type_p) {
+  ConcatFoldOptimizer opt;
+  EXPECT_EQ(opt.getType(), "fold_concat");
+}
+
+TEST(ConcatFoldOptimizer, fold_nested_concat_p) {
+  std::vector<LayerRepresentation> before = {
+    {"input", {"name=in1", "input_shape=1:2:4"}},
+    {"input", {"name=in2", "input_shape=1:2:4"}},
+    {"input", {"name=in3", "input_shape=1:2:4"}},
+    {"concat", {"name=ct_in", "axis=3", "input_layers=in2,in3"}},
+    {"concat", {"name=ct_out", "axis=3", "input_layers=in1,ct_in"}},
+  };
+  std::vector<LayerRepresentation> after = {
+    {"input", {"name=in1", "input_shape=1:2:4"}},
+    {"input", {"name=in2", "input_shape=1:2:4"}},
+    {"input", {"name=in3", "input_shape=1:2:4"}},
+    {"concat", {"name=ct_out", "axis=3", "input_layers=in1,in2,in3"}},
+  };
+
+  ConcatFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, before, after));
+}
+
+/**
+ * @brief the inner concat's inputs must land at its own position, not be
+ * appended at the end
+ *
+ */
+TEST(ConcatFoldOptimizer, fold_preserves_input_order_p) {
+  std::vector<LayerRepresentation> before = {
+    {"input", {"name=in1", "input_shape=1:2:4"}},
+    {"input", {"name=in2", "input_shape=1:2:4"}},
+    {"input", {"name=in3", "input_shape=1:2:4"}},
+    {"input", {"name=in4", "input_shape=1:2:4"}},
+    {"concat", {"name=ct_in", "axis=3", "input_layers=in2,in3"}},
+    {"concat", {"name=ct_out", "axis=3", "input_layers=in1,ct_in,in4"}},
+  };
+  std::vector<LayerRepresentation> after = {
+    {"input", {"name=in1", "input_shape=1:2:4"}},
+    {"input", {"name=in2", "input_shape=1:2:4"}},
+    {"input", {"name=in3", "input_shape=1:2:4"}},
+    {"input", {"name=in4", "input_shape=1:2:4"}},
+    {"concat", {"name=ct_out", "axis=3", "input_layers=in1,in2,in3,in4"}},
+  };
+
+  ConcatFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, before, after));
+}
+
+TEST(ConcatFoldOptimizer, fold_concat_nest_p) {
+  std::vector<LayerRepresentation> before = {
+    {"input", {"name=in1", "input_shape=1:2:4"}},
+    {"input", {"name=in2", "input_shape=1:2:4"}},
+    {"input", {"name=in3", "input_shape=1:2:4"}},
+    {"concat", {"name=ct_a", "axis=3", "input_layers=in2,in3"}},
+    {"concat", {"name=ct_b", "axis=3", "input_layers=ct_a"}},
+    {"concat", {"name=ct_c", "axis=3", "input_layers=in1,ct_b"}},
+  };
+  std::vector<LayerRepresentation> after = {
+    {"input", {"name=in1", "input_shape=1:2:4"}},
+    {"input", {"name=in2", "input_shape=1:2:4"}},
+    {"input", {"name=in3", "input_shape=1:2:4"}},
+    {"concat", {"name=ct_c", "axis=3", "input_layers=in1,in2,in3"}},
+  };
+
+  ConcatFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, before, after));
+}
+
+/**
+ * @brief concatenating along different axes is not associative
+ *
+ */
+TEST(ConcatFoldOptimizer, keep_mismatched_axis_p) {
+  std::vector<LayerRepresentation> graph = {
+    {"input", {"name=in1", "input_shape=2:2:4"}},
+    {"input", {"name=in2", "input_shape=2:2:4"}},
+    {"input", {"name=in3", "input_shape=2:2:4"}},
+    {"concat", {"name=ct_in", "axis=1", "input_layers=in2,in3"}},
+    {"concat", {"name=ct_out", "axis=3", "input_layers=in1,ct_in"}},
+  };
+
+  ConcatFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, graph, graph));
+}
+
+/**
+ * @brief an unset axis resolves from the input dimensions during finalize(),
+ * so it cannot be compared here and the nest is left alone
+ *
+ */
+TEST(ConcatFoldOptimizer, keep_implicit_axis_p) {
+  std::vector<LayerRepresentation> graph = {
+    {"input", {"name=in1", "input_shape=1:2:4"}},
+    {"input", {"name=in2", "input_shape=1:2:4"}},
+    {"input", {"name=in3", "input_shape=1:2:4"}},
+    {"concat", {"name=ct_in", "input_layers=in2,in3"}},
+    {"concat", {"name=ct_out", "input_layers=in1,ct_in"}},
+  };
+
+  ConcatFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, graph, graph));
+}
+
+/**
+ * @brief an inner concat observed by another consumer as well is not folded
+ *
+ */
+TEST(ConcatFoldOptimizer, keep_fanned_out_concat_p) {
+  std::vector<LayerRepresentation> graph = {
+    {"input", {"name=in1", "input_shape=1:2:4"}},
+    {"input", {"name=in2", "input_shape=1:2:4"}},
+    {"input", {"name=in3", "input_shape=1:2:4"}},
+    {"concat", {"name=ct_in", "axis=3", "input_layers=in2,in3"}},
+    {"concat", {"name=ct_out", "axis=3", "input_layers=in1,ct_in"}},
+    {"fully_connected", {"name=fc1", "unit=2", "input_layers=ct_in"}},
+  };
+
+  ConcatFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, graph, graph));
+}
+
+TEST(ConcatFoldOptimizer, no_nesting_is_noop_p) {
+  std::vector<LayerRepresentation> graph = {
+    {"input", {"name=in1", "input_shape=1:2:4"}},
+    {"input", {"name=in2", "input_shape=1:2:4"}},
+    {"concat", {"name=ct1", "axis=3", "input_layers=in1,in2"}},
+    {"fully_connected", {"name=fc1", "unit=2", "input_layers=ct1"}},
+  };
+
+  ConcatFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, graph, graph));
+}
+
+TEST(ConcatFoldOptimizer, empty_graph_p) {
+  ConcatFoldOptimizer opt;
+  EXPECT_NO_THROW(optimizeAndEqual(opt, {}, {}));
+}
+
+/**
+ * @brief graphEqual only compares exported properties, which do not carry
+ * output connections, so the slot renumbering is asserted directly here
+ *
+ */
+TEST(ConcatFoldOptimizer, fold_rebuilds_output_connections_p) {
+  std::vector<std::unique_ptr<GraphRealizer>> realizers;
+  auto graph = makeCompiledGraph(
+    {
+      {"input", {"name=in1", "input_shape=1:2:4"}},
+      {"input", {"name=in2", "input_shape=1:2:4"}},
+      {"input", {"name=in3", "input_shape=1:2:4"}},
+      {"concat", {"name=ct_in", "axis=3", "input_layers=in2,in3"}},
+      {"concat", {"name=ct_out", "axis=3", "input_layers=in1,ct_in"}},
+    },
+    realizers);
+
+  ConcatFoldOptimizer opt;
+  auto processed = opt.optimize(graph);
+
+  auto find = [&processed](const std::string &name) -> LayerNode * {
+    for (auto &node : processed) {
+      if (node->getName() == name) {
+        return node.get();
+      }
+    }
+    return nullptr;
+  };
+
+  auto *concat = find("ct_out");
+  ASSERT_NE(concat, nullptr);
+  ASSERT_EQ(concat->getNumInputConnections(), 3u);
+  EXPECT_EQ(find("ct_in"), nullptr);
+
+  /// each producer must name the surviving concat, at the slot it now occupies
+  const char *producers[] = {"in1", "in2", "in3"};
+  for (unsigned i = 0; i < 3; ++i) {
+    EXPECT_EQ(concat->getInputConnectionName(i), producers[i]);
+
+    auto *producer = find(producers[i]);
+    ASSERT_NE(producer, nullptr);
+    ASSERT_EQ(producer->getNumOutputConnections(), 1u);
+
+    auto *out = producer->getOutputConnection(0);
+    ASSERT_NE(out, nullptr);
+    EXPECT_EQ(out->getName(), "ct_out");
+    EXPECT_EQ(out->getIndex(), i);
+  }
+}
+
+/**
+ * @brief folding an uncompiled graph must leave something NetworkGraph can
+ * still compile, which also covers the branch where no output connections
+ * exist yet
+ *
+ */
+TEST(ConcatFoldOptimizer, folded_graph_is_compilable_p) {
+  auto graph = makeGraph({
+    {"input", {"name=in1", "input_shape=1:2:4"}},
+    {"input", {"name=in2", "input_shape=1:2:4"}},
+    {"input", {"name=in3", "input_shape=1:2:4"}},
+    {"concat", {"name=ct_in", "axis=3", "input_layers=in2,in3"}},
+    {"concat", {"name=ct_out", "axis=3", "input_layers=in1,ct_in"}},
+  });
+
+  ConcatFoldOptimizer opt;
+  auto processed = opt.optimize(graph);
+  EXPECT_EQ(processed.size(), 4u);
+
+  auto model_graph = NetworkGraph();
+  for (auto &node : processed) {
+    model_graph.addLayer(node);
+  }
+  EXPECT_EQ(model_graph.compile(""), ML_ERROR_NONE);
 }
 
 /**
