@@ -12,6 +12,7 @@
 #ifndef __OPTIMIZER_UTILS_H__
 #define __OPTIMIZER_UTILS_H__
 
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -21,6 +22,22 @@
 namespace nntrainer {
 
 class LayerNode;
+
+/**
+ * @brief read a property off a layer as it would be serialized
+ * @note LayerNode::getProperty() only reaches the node's own properties, and
+ * layers are not required to override Layer::getProperty(), which returns an
+ * empty string by default. Reading through the exporter works for any layer.
+ * An unset property is skipped while exporting, so a missing value means the
+ * layer left it to be resolved during finalize() and it cannot be reasoned
+ * about at this stage.
+ *
+ * @param node node to read from
+ * @param key property key to look for
+ * @return std::optional<std::string> value, or nullopt when unset
+ */
+std::optional<std::string> getExportedProperty(const LayerNode &node,
+                                               const std::string &key);
 
 /**
  * @brief count how many input connections in the graph refer to each node name

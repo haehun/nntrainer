@@ -27,37 +27,6 @@
 
 namespace nntrainer {
 
-/**
- * @brief read a property off a layer as it would be serialized
- * @note LayerNode::getProperty() only reaches the node's own properties and
- * ConcatLayer does not override Layer::getProperty(), so the layer's own
- * properties have to be read back through the exporter. An unset property is
- * skipped while exporting, which is exactly how an implicit axis is detected.
- *
- * @param node node to read from
- * @param key property key to look for
- * @return std::optional<std::string> value, or nullopt when unset
- */
-static std::optional<std::string> getExportedProperty(const LayerNode &node,
-                                                      const std::string &key) {
-  Exporter exporter;
-  node.exportTo(exporter, ml::train::ExportMethods::METHOD_STRINGVECTOR);
-
-  auto result =
-    exporter.getResult<ml::train::ExportMethods::METHOD_STRINGVECTOR>();
-  if (result == nullptr) {
-    return std::nullopt;
-  }
-
-  for (auto &[prop_key, prop_value] : *result) {
-    if (istrequal(prop_key, key)) {
-      return prop_value;
-    }
-  }
-
-  return std::nullopt;
-}
-
 GraphRepresentation
 ConcatFoldOptimizer::optimize(const GraphRepresentation &reference) {
   std::unordered_map<std::string, LayerNode *> existing_nodes;

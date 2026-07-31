@@ -14,12 +14,33 @@
 #include <connection.h>
 #include <layer_node.h>
 #include <nntrainer_error.h>
+#include <node_exporter.h>
 
 #include <stdexcept>
 
 namespace nntrainer {
 
 static constexpr unsigned SINGLE_INOUT_IDX = 0;
+
+std::optional<std::string> getExportedProperty(const LayerNode &node,
+                                               const std::string &key) {
+  Exporter exporter;
+  node.exportTo(exporter, ml::train::ExportMethods::METHOD_STRINGVECTOR);
+
+  auto result =
+    exporter.getResult<ml::train::ExportMethods::METHOD_STRINGVECTOR>();
+  if (result == nullptr) {
+    return std::nullopt;
+  }
+
+  for (auto &[prop_key, prop_value] : *result) {
+    if (istrequal(prop_key, key)) {
+      return prop_value;
+    }
+  }
+
+  return std::nullopt;
+}
 
 std::unordered_map<std::string, unsigned>
 countConsumers(const GraphRepresentation &reference) {

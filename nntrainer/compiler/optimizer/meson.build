@@ -4,6 +4,8 @@ optimizer_sources = [
   'identity_remove_optimizer.cpp',
   'reshape_fold_optimizer.cpp',
   'concat_fold_optimizer.cpp',
+  'split_remove_optimizer.cpp',
+  'multiout_fold_optimizer.cpp',
 ]
 
 foreach s : optimizer_sources

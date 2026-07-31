@@ -18,9 +18,11 @@
 #include <flatten_realizer.h>
 #include <graph_optimizer.h>
 #include <identity_remove_optimizer.h>
+#include <multiout_fold_optimizer.h>
 #include <no_op_optimizer.h>
 #include <realizer.h>
 #include <reshape_fold_optimizer.h>
+#include <split_remove_optimizer.h>
 
 #include <network_graph.h>
 
@@ -505,6 +507,84 @@ TEST(ConcatFoldOptimizer, folded_graph_is_compilable_p) {
     model_graph.addLayer(node);
   }
   EXPECT_EQ(model_graph.compile(""), ML_ERROR_NONE);
+}
+
+TEST(SplitRemoveOptimizer, type_p) {
+  SplitRemoveOptimizer opt;
+  EXPECT_EQ(opt.getType(), "remove_split");
+}
+
+TEST(SplitRemoveOptimizer, remove_identity_split_p) {
+  std::vector<LayerRepresentation> before = {
+    {"input", {"name=in", "input_shape=1:2:4"}},
+    {"split", {"name=sp", "split_number=1", "input_layers=in"}},
+    {"fully_connected", {"name=fc", "unit=2", "input_layers=sp"}},
+  };
+  std::vector<LayerRepresentation> after = {
+    {"input", {"name=in", "input_shape=1:2:4"}},
+    {"fully_connected", {"name=fc", "unit=2", "input_layers=in"}},
+  };
+
+  SplitRemoveOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, before, after));
+}
+
+TEST(SplitRemoveOptimizer, keep_multi_split_p) {
+  std::vector<LayerRepresentation> graph = {
+    {"input", {"name=in", "input_shape=1:2:4"}},
+    {"split", {"name=sp", "split_number=2", "input_layers=in"}},
+    {"fully_connected", {"name=fc1", "unit=2", "input_layers=sp(0)"}},
+    {"fully_connected", {"name=fc2", "unit=2", "input_layers=sp(1)"}},
+  };
+
+  SplitRemoveOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, graph, graph));
+}
+
+TEST(SplitRemoveOptimizer, empty_graph_p) {
+  SplitRemoveOptimizer opt;
+  EXPECT_NO_THROW(optimizeAndEqual(opt, {}, {}));
+}
+
+TEST(MultioutFoldOptimizer, type_p) {
+  MultioutFoldOptimizer opt;
+  EXPECT_EQ(opt.getType(), "fold_multiout");
+}
+
+TEST(MultioutFoldOptimizer, fold_single_consumer_multiout_p) {
+  std::vector<LayerRepresentation> before = {
+    {"input", {"name=in", "input_shape=1:2:4"}},
+    {"multiout", {"name=mo", "input_layers=in"}},
+    {"fully_connected", {"name=fc", "unit=2", "input_layers=mo"}},
+  };
+  std::vector<LayerRepresentation> after = {
+    {"input", {"name=in", "input_shape=1:2:4"}},
+    {"fully_connected", {"name=fc", "unit=2", "input_layers=in"}},
+  };
+
+  MultioutFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, before, after));
+}
+
+/**
+ * @brief a multiout that genuinely fans out is what the layer exists for
+ *
+ */
+TEST(MultioutFoldOptimizer, keep_fanned_out_multiout_p) {
+  std::vector<LayerRepresentation> graph = {
+    {"input", {"name=in", "input_shape=1:2:4"}},
+    {"multiout", {"name=mo", "input_layers=in"}},
+    {"fully_connected", {"name=fc1", "unit=2", "input_layers=mo(0)"}},
+    {"fully_connected", {"name=fc2", "unit=2", "input_layers=mo(1)"}},
+  };
+
+  MultioutFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, graph, graph));
+}
+
+TEST(MultioutFoldOptimizer, empty_graph_p) {
+  MultioutFoldOptimizer opt;
+  EXPECT_NO_THROW(optimizeAndEqual(opt, {}, {}));
 }
 
 /**
