@@ -20,6 +20,7 @@
 #include <identity_remove_optimizer.h>
 #include <multiout_fold_optimizer.h>
 #include <no_op_optimizer.h>
+#include <permute_fold_optimizer.h>
 #include <realizer.h>
 #include <reshape_fold_optimizer.h>
 #include <split_remove_optimizer.h>
@@ -507,6 +508,156 @@ TEST(ConcatFoldOptimizer, folded_graph_is_compilable_p) {
     model_graph.addLayer(node);
   }
   EXPECT_EQ(model_graph.compile(""), ML_ERROR_NONE);
+}
+
+TEST(PermuteFoldOptimizer, type_p) {
+  PermuteFoldOptimizer opt;
+  EXPECT_EQ(opt.getType(), "fold_permute");
+}
+
+/**
+ * @brief (c,h,w) -> (h,w,c) twice is (c,h,w) -> (w,c,h)
+ *
+ */
+TEST(PermuteFoldOptimizer, fold_two_permutes_p) {
+  std::vector<LayerRepresentation> before = {
+    {"input", {"name=in", "input_shape=2:3:4"}},
+    {"permute", {"name=p1", "direction=2,3,1", "input_layers=in"}},
+    {"permute", {"name=p2", "direction=2,3,1", "input_layers=p1"}},
+    {"fully_connected", {"name=fc", "unit=2", "input_layers=p2"}},
+  };
+  std::vector<LayerRepresentation> after = {
+    {"input", {"name=in", "input_shape=2:3:4"}},
+    {"permute", {"name=p2", "direction=3,1,2", "input_layers=in"}},
+    {"fully_connected", {"name=fc", "unit=2", "input_layers=p2"}},
+  };
+
+  PermuteFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, before, after));
+}
+
+/**
+ * @brief permutation composition does not commute, so this pins the order down
+ * @details swapping (c,h) then (h,w) sends (C,H,W) -> (H,C,W) -> (H,W,C), which
+ * is direction 2,3,1. Composing the other way round would give 3,1,2 and
+ * silently lay the tensor out wrong.
+ *
+ */
+TEST(PermuteFoldOptimizer, fold_respects_composition_order_p) {
+  std::vector<LayerRepresentation> before = {
+    {"input", {"name=in", "input_shape=2:3:4"}},
+    {"permute", {"name=p1", "direction=2,1,3", "input_layers=in"}},
+    {"permute", {"name=p2", "direction=1,3,2", "input_layers=p1"}},
+    {"fully_connected", {"name=fc", "unit=2", "input_layers=p2"}},
+  };
+  std::vector<LayerRepresentation> after = {
+    {"input", {"name=in", "input_shape=2:3:4"}},
+    {"permute", {"name=p2", "direction=2,3,1", "input_layers=in"}},
+    {"fully_connected", {"name=fc", "unit=2", "input_layers=p2"}},
+  };
+
+  PermuteFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, before, after));
+}
+
+TEST(PermuteFoldOptimizer, fold_permute_run_p) {
+  std::vector<LayerRepresentation> before = {
+    {"input", {"name=in", "input_shape=2:3:4"}},
+    {"permute", {"name=p1", "direction=2,3,1", "input_layers=in"}},
+    {"permute", {"name=p2", "direction=2,3,1", "input_layers=p1"}},
+    {"permute", {"name=p3", "direction=2,3,1", "input_layers=p2"}},
+    {"fully_connected", {"name=fc", "unit=2", "input_layers=p3"}},
+  };
+  /// three rotations of three axes come back around to the identity, and the
+  /// whole run disappears
+  std::vector<LayerRepresentation> after = {
+    {"input", {"name=in", "input_shape=2:3:4"}},
+    {"fully_connected", {"name=fc", "unit=2", "input_layers=in"}},
+  };
+
+  PermuteFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, before, after));
+}
+
+/**
+ * @brief a transpose and its inverse copy the tensor twice and move nothing
+ *
+ */
+TEST(PermuteFoldOptimizer, drop_identity_roundtrip_p) {
+  std::vector<LayerRepresentation> before = {
+    {"input", {"name=in", "input_shape=2:3:4"}},
+    {"permute", {"name=p1", "direction=2,3,1", "input_layers=in"}},
+    {"permute", {"name=p2", "direction=3,1,2", "input_layers=p1"}},
+    {"fully_connected", {"name=fc", "unit=2", "input_layers=p2"}},
+  };
+  std::vector<LayerRepresentation> after = {
+    {"input", {"name=in", "input_shape=2:3:4"}},
+    {"fully_connected", {"name=fc", "unit=2", "input_layers=in"}},
+  };
+
+  PermuteFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, before, after));
+}
+
+/**
+ * @brief the survivor of an identity run may be the model output, in which case
+ * it stays as an explicit no-op permute rather than being spliced away
+ *
+ */
+TEST(PermuteFoldOptimizer, keep_terminal_identity_run_p) {
+  std::vector<LayerRepresentation> before = {
+    {"input", {"name=in", "input_shape=2:3:4"}},
+    {"permute", {"name=p1", "direction=2,3,1", "input_layers=in"}},
+    {"permute", {"name=p2", "direction=3,1,2", "input_layers=p1"}},
+  };
+  std::vector<LayerRepresentation> after = {
+    {"input", {"name=in", "input_shape=2:3:4"}},
+    {"permute", {"name=p2", "direction=1,2,3", "input_layers=in"}},
+  };
+
+  PermuteFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, before, after));
+}
+
+TEST(PermuteFoldOptimizer, keep_fanned_out_permute_p) {
+  std::vector<LayerRepresentation> graph = {
+    {"input", {"name=in", "input_shape=2:3:4"}},
+    {"permute", {"name=p1", "direction=2,3,1", "input_layers=in"}},
+    {"permute", {"name=p2", "direction=2,3,1", "input_layers=p1"}},
+    {"fully_connected", {"name=fc1", "unit=2", "input_layers=p1"}},
+    {"fully_connected", {"name=fc2", "unit=2", "input_layers=p2"}},
+  };
+
+  PermuteFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, graph, graph));
+}
+
+TEST(PermuteFoldOptimizer, keep_separated_permutes_p) {
+  std::vector<LayerRepresentation> graph = {
+    {"input", {"name=in", "input_shape=2:3:4"}},
+    {"permute", {"name=p1", "direction=2,3,1", "input_layers=in"}},
+    {"fully_connected", {"name=fc1", "unit=2", "input_layers=p1"}},
+    {"permute", {"name=p2", "direction=2,3,1", "input_layers=fc1"}},
+  };
+
+  PermuteFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, graph, graph));
+}
+
+TEST(PermuteFoldOptimizer, single_permute_is_noop_p) {
+  std::vector<LayerRepresentation> graph = {
+    {"input", {"name=in", "input_shape=2:3:4"}},
+    {"permute", {"name=p1", "direction=2,3,1", "input_layers=in"}},
+    {"fully_connected", {"name=fc", "unit=2", "input_layers=p1"}},
+  };
+
+  PermuteFoldOptimizer opt;
+  EXPECT_NO_THROW(compileAndOptimizeAndEqual(opt, graph, graph));
+}
+
+TEST(PermuteFoldOptimizer, empty_graph_p) {
+  PermuteFoldOptimizer opt;
+  EXPECT_NO_THROW(optimizeAndEqual(opt, {}, {}));
 }
 
 TEST(SplitRemoveOptimizer, type_p) {
