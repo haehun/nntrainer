@@ -200,6 +200,12 @@ void QNNGraph::forwarding(RunLayerContext &context, bool training) {
     << " does not match with number of QNN's output tensors "
     << graphInfo->numOutputTensors << "!";
 
+  // Rebuild from scratch: updateBufferType only appends, so without this the
+  // vectors grow by one graph's worth of entries per forwarding call and
+  // buffers[i] keeps resolving to the very first call's pointers.
+  currentInputBuffers.clear();
+  currentOutputBuffers.clear();
+
   for (size_t i = 0; i < context.getNumInputs(); ++i) {
     updateBufferType(currentInputBuffers, context.getInput(i));
   }
@@ -322,12 +328,22 @@ void QNNGraph::updateBufferType(std::vector<BufferTypePtr> &buffers,
     buffers.push_back(T.getData<uint8_t>());
     break;
   case Tdatatype::UINT16:
+  case Tdatatype::FP16:
+    // FP16 is handed to QNN as a raw 16-bit buffer: QNN reinterprets it via
+    // the tensor's own QNN_DATATYPE_FLOAT_16, so no conversion is needed here.
     buffers.push_back(T.getData<uint16_t>());
     break;
   case Tdatatype::FP32:
     buffers.push_back(T.getData<float>());
     break;
   default:
+    // Push a placeholder so buffers stays index-aligned with the graph's
+    // tensor list. Skipping the entry would shift every later index and make
+    // buffers[i] read past the end, which surfaces far away as a bogus
+    // "Unknown type" and a QNN execute failure for a missing memHandle.
+    ml_loge("QNNGraph: unhandled tensor data type %d; input will not be bound",
+            static_cast<int>(type));
+    buffers.push_back(std::monostate{});
     break;
   }
 }

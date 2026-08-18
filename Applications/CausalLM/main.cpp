@@ -418,6 +418,7 @@ int main(int argc, char *argv[]) {
       }
     }
 
+    printMemoryUsage();
     auto model = causallm::Factory::Instance().create(architecture, cfg,
                                                       generation_cfg, nntr_cfg);
     if (!model) {
@@ -427,9 +428,11 @@ int main(int argc, char *argv[]) {
       std::cerr << std::endl;
       return EXIT_FAILURE;
     }
+    printMemoryUsage();
     model->initialize();
     model->load_weight(weight_file);
     model->repack_weight();
+    printMemoryUsage();
 
     bool do_sample = generation_cfg.value("do_sample", false);
 
@@ -455,6 +458,10 @@ int main(int argc, char *argv[]) {
     std::cerr << "\n[!] FATAL ERROR: " << e.what() << "\n";
     return EXIT_FAILURE;
   }
+
+  std::cout << "[main] Sleeping for 100 seconds..." << std::endl;
+  std::this_thread::sleep_for(std::chrono::seconds(100));
+  std::cout << "[main] Done sleeping." << std::endl;
 
   return EXIT_SUCCESS;
 }

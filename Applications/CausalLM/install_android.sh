@@ -200,9 +200,42 @@ fi
 
 log_success "All libraries pushed"
 
+# Push QNN libraries if present (built with --qnn)
+QNN_LIBS=(
+    "$SCRIPT_DIR/jni/libs/arm64-v8a/libqnn_context.so"
+    "$SCRIPT_DIR/jni/libs/arm64-v8a/libQnnHtp.so"
+    "$SCRIPT_DIR/jni/libs/arm64-v8a/libQnnHtpV73Stub.so"
+    "$SCRIPT_DIR/jni/libs/arm64-v8a/libQnnSystem.so"
+    "$SCRIPT_DIR/jni/libs/arm64-v8a/libQnnCpu.so"
+)
+
+HAS_QNN=false
+for qnn_lib in "${QNN_LIBS[@]}"; do
+    if [ -f "$qnn_lib" ]; then
+        log_info "Pushing $(basename "$qnn_lib")..."
+        adb push "$qnn_lib" "$INSTALL_DIR/" 2>&1 | tail -1
+        HAS_QNN=true
+    fi
+done
+if [ "$HAS_QNN" = true ]; then
+    log_success "QNN libraries pushed"
+fi
+
 # Create run script on device
 log_info "Creating run script on device..."
-adb shell "cat > $INSTALL_DIR/run_causallm.sh << 'EOF'
+if [ "$HAS_QNN" = true ]; then
+    # QNN build: include ADSP_LIBRARY_PATH for QNN runtime
+    adb shell "cat > $INSTALL_DIR/run_causallm.sh << 'EOF'
+#!/system/bin/sh
+export LD_LIBRARY_PATH=$INSTALL_DIR:\$LD_LIBRARY_PATH
+export ADSP_LIBRARY_PATH=$INSTALL_DIR:\$ADSP_LIBRARY_PATH
+export NNTR_NUM_THREADS=4
+cd $INSTALL_DIR
+./nntrainer_causallm \$@
+EOF
+"
+else
+    adb shell "cat > $INSTALL_DIR/run_causallm.sh << 'EOF'
 #!/system/bin/sh
 export LD_LIBRARY_PATH=$INSTALL_DIR:\$LD_LIBRARY_PATH
 export NNTR_NUM_THREADS=4
@@ -210,7 +243,9 @@ cd $INSTALL_DIR
 ./nntrainer_causallm \$@
 EOF
 "
+fi
 adb shell "chmod 755 $INSTALL_DIR/run_causallm.sh"
+
 
 # Create quantize run script on device
 adb shell "cat > $INSTALL_DIR/run_quantize.sh << 'EOF'
@@ -263,7 +298,12 @@ fi
 log_info "  - libnntrainer.so"
 log_info "  - libccapi-nntrainer.so"
 log_info "  - libc++_shared.so"
+if [ "$HAS_QNN" = true ]; then
+    log_info "  - libqnn_context.so (QNN context plugin)"
+    log_info "  - libQnnHtp.so, libQnnSystem.so, ... (QNN runtime)"
+fi
 log_header "How to run"
+
 log_info "To run CausalLM on the device:"
 log_info "  1. Push your model files to: $MODEL_DIR/"
 log_info "      Example: adb push res/qwen3/qwen3-4b $MODEL_DIR/qwen3-4b/"

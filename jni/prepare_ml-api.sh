@@ -51,7 +51,20 @@ function _cleanup_ml_api {
   find lib ! \( -name 'libnnstreamer-native.so' -or -name 'libgstreamer_android.so' \) -type f -exec rm -f {} +
 }
 
+# Try copying from a sibling nntrainer builddir first (S3 download often fails
+# behind corporate proxies). The sibling builddir is at <repo_root>/../nntrainer
+# relative to this repo's nntrainer, i.e. the same nntrainer/builddir but from a
+# different checkout, or simply a pre-populated copy.
+_COPY_SRC="$(cd "$(dirname "$0")/../.." && pwd)/../nntrainer/builddir/ml-api-inference"
+if [ ! -d "${TARGET}/include" ] && [ -d "${_COPY_SRC}/include" ]; then
+  echo "[ml_api] copying from ${_COPY_SRC}"
+  cp -r "${_COPY_SRC}/include" "${TARGET}/include"
+  cp -r "${_COPY_SRC}/lib" "${TARGET}/lib" 2>/dev/null || true
+fi
+
+# Fallback: download from S3 if still not present
 [ ! -d "${TARGET}/include" ] && _download_ml_api && _extract_ml_api \
   && _cleanup_ml_api
 
 popd
+

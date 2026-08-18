@@ -670,6 +670,7 @@ endif
 endif # enable ruy
 
 if get_option('platform') == 'android'
+
   message('preparing ml api')
   run_command([meson.source_root() / 'jni' / 'prepare_ml-api.sh', meson.build_root() / 'ml-api-inference'], check: true)
   ml_api_common_root = meson.build_root() / 'ml-api-inference'
@@ -682,6 +683,7 @@ if get_option('platform') == 'android'
   )
   ml_api_common_dep = declare_dependency(include_directories: ['ml-api-inference/include'])
 endif
+
 
 if get_option('enable-nnstreamer-backbone') and get_option('platform') != 'android'
   extra_defines += '-DENABLE_NNSTREAMER_BACKBONE=1'

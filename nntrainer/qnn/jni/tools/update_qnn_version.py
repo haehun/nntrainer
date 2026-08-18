@@ -107,7 +107,9 @@ if __name__ == '__main__':
 	_qnn_common_h = os.path.join(VENDOR_DIR, 'QNN/QnnCommon.h')
 	if not os.path.exists(_qnn_common_h):
 		sys.exit(f'Expected {_qnn_common_h} to exist after SDK copy — check SDK layout.')
-	_expected_minor = 36
+	# Known-good QNN API minor versions: 36 = SDK 2.47.x, 38 = SDK 2.49.x.
+	# The vendor tree layout is identical across these; only the API headers move.
+	_supported_minors = {36: '2.47.x', 38: '2.49.x'}
 	_found_minor = None
 	with open(_qnn_common_h, 'r') as _fh:
 		for _line in _fh:
@@ -117,12 +119,14 @@ if __name__ == '__main__':
 				break
 	if _found_minor is None:
 		sys.exit(f'{_qnn_common_h} does not define QNN_API_VERSION_MINOR — unexpected SDK layout.')
-	if _found_minor != _expected_minor:
+	if _found_minor not in _supported_minors:
 		sys.exit(
-			f'Unexpected QNN API version: expected MINOR={_expected_minor} (QNN SDK 2.47.x), '
-			f'found MINOR={_found_minor}. '
-			f'Update the expected version in this script if you intend to bump the SDK.'
+			f'Unsupported QNN API version: found MINOR={_found_minor}, '
+			f'supported are {sorted(_supported_minors)} '
+			f'({", ".join(f"{k}=SDK {v}" for k, v in sorted(_supported_minors.items()))}). '
+			f'Add the version to _supported_minors in this script if you intend to bump the SDK.'
 		)
+	print(f'QNN API MINOR={_found_minor} (SDK {_supported_minors[_found_minor]})')
 
 	# ── 2. Remove unused files/directories ────────────────────────────────
 
@@ -172,5 +176,31 @@ if __name__ == '__main__':
 	dl_open_wrapper = os.path.join(VENDOR_DIR, 'qnn-api/qualla/detail/dlOpenWrapper.hpp')
 	find_replace_in_file(dl_open_wrapper, 'static const int s_anchor', 'static int s_anchor')
 	find_replace_in_file(dl_open_wrapper, 'reinterpret_cast<const void*>', 'reinterpret_cast<void*>')
+
+	# SDK 2.49+ adds qnn-api/IOTensor/IOTensorTypes.hpp, pulled in by IBackend.hpp.
+	# It redefines StatusCode / OutputDataType / InputDataType, which Utils/IOTensor.hpp
+	# already declares in the same qnn::tools::iotensor namespace, so any TU seeing
+	# both fails to compile. IBackend.hpp only needs GraphInputInfo from that header,
+	# so drop the duplicate enums and take them from Utils/IOTensor.hpp instead.
+	_io_types = os.path.join(VENDOR_DIR, 'qnn-api/IOTensor/IOTensorTypes.hpp')
+	if os.path.exists(_io_types):
+		with open(_io_types, 'r') as _fh:
+			_data = _fh.read()
+		_dup_enums = re.compile(
+			r'enum class StatusCode \{.*?\};\s*'
+			r'enum class OutputDataType \{[^}]*\};\s*'
+			r'enum class InputDataType \{[^}]*\};\s*',
+			re.DOTALL)
+		_data, _n = _dup_enums.subn('', _data)
+		if _n != 1:
+			sys.exit(
+				f'{_io_types}: expected exactly 1 duplicate-enum block, found {_n}. '
+				f'The SDK layout changed — review this patch.'
+			)
+		# Utils/ is on the include path; IOTensor.hpp declares the three enums.
+		_data = _data.replace('#pragma once', '#pragma once\n\n#include "IOTensor.hpp"', 1)
+		with open(_io_types, 'w') as _fh:
+			_fh.write(_data)
+		print('Patched IOTensorTypes.hpp: removed enums duplicated by Utils/IOTensor.hpp')
 
 	print('QNN vendor files updated successfully.')
