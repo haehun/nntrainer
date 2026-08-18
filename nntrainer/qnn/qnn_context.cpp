@@ -196,6 +196,7 @@ int QNNContext::init() {
       LOGE("init: unknown error initializing QNN Function Pointers");
       ml_loge("Error initializing QNN Function Pointers");
     }
+    return -1;
   }
 
   LOGD("init: calling getQnnSystemFunctionPointers");
@@ -206,6 +207,7 @@ int QNNContext::init() {
   if (qnn::tools::dynamicloadutil::StatusCode::SUCCESS != statusCode) {
     LOGE("init: Error initializing QNN System Function Pointers");
     ml_loge("Error initializing QNN System Function Pointers", EXIT_FAILURE);
+    return -1;
   }
 
   if (log::isLogInitialized()) {
