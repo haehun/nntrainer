@@ -349,12 +349,31 @@ int main(int argc, char *argv[]) {
       generation_cfg = causallm::LoadJsonFile(generation_config_path);
     }
     json nntr_cfg = causallm::LoadJsonFile(model_path + "/nntr_config.json");
-    resolveNntrConfigPath(nntr_cfg, "tokenizer_file", model_path);
-    resolveNntrConfigPath(nntr_cfg, "embedding_file_name", model_path);
-    resolveNntrConfigPath(nntr_cfg, "ple_file_name", model_path);
-    resolveNntrConfigPath(nntr_cfg, "model_file_name", model_path);
-    resolveNntrConfigPath(nntr_cfg, "binary_config_path", model_path);
-    resolveNntrConfigPath(nntr_cfg, "image_newline_path", model_path);
+    // Absolutize before rebasing config-relative paths onto it. If model_path
+    // is itself relative (the common invocation: `quick_dot_ai
+    // models/foo ...` from a shell already cd'd into the install dir), a
+    // rebased-but-still-relative path (e.g. "models/foo/x.json") looks
+    // "not yet absolute" to any *second* rebase downstream (e.g.
+    // Quick_Dot_AI_QNN::setupParameters() rebasing embedding_file_name /
+    // ple_file_name onto model_file_name's dirname), which then prepends the
+    // model dir again and doubles the path
+    // ("models/foo/models/foo/x.json"). Absolutizing model_path here makes
+    // every path resolved below unambiguously final, so that check is not
+    // fooled regardless of how the caller invoked us.
+    const std::string model_path_abs =
+      std::filesystem::absolute(model_path).string();
+    resolveNntrConfigPath(nntr_cfg, "tokenizer_file", model_path_abs);
+    resolveNntrConfigPath(nntr_cfg, "embedding_file_name", model_path_abs);
+    resolveNntrConfigPath(nntr_cfg, "ple_file_name", model_path_abs);
+    resolveNntrConfigPath(nntr_cfg, "model_file_name", model_path_abs);
+    // NOTE: binary_config_path/image_newline_path are intentionally left
+    // un-rebased here (unlike upstream nntrainer commit 2fa44559c). Quick.AI's
+    // own Quick_Dot_AI_QNN::setupParameters() (main repo, not modifiable from
+    // this submodule) rebases binary_config_path itself, relative to the
+    // (now-rebased, so no-longer-bare) model_file_name's dirname. Rebasing
+    // binary_config_path here too would make that rebase happen twice and
+    // produce a doubled path like
+    // "models/gauss-4-qnn/models/gauss-4-qnn/....json".
 
     if (nntr_cfg.contains("system_prompt")) {
       system_head_prompt =
