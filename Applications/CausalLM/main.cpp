@@ -353,8 +353,14 @@ int main(int argc, char *argv[]) {
     resolveNntrConfigPath(nntr_cfg, "embedding_file_name", model_path);
     resolveNntrConfigPath(nntr_cfg, "ple_file_name", model_path);
     resolveNntrConfigPath(nntr_cfg, "model_file_name", model_path);
-    resolveNntrConfigPath(nntr_cfg, "binary_config_path", model_path);
-    resolveNntrConfigPath(nntr_cfg, "image_newline_path", model_path);
+    // NOTE: binary_config_path/image_newline_path are intentionally left
+    // un-rebased here (unlike upstream nntrainer commit 2fa44559c). Quick.AI's
+    // own Quick_Dot_AI_QNN::setupParameters() (main repo, not modifiable from
+    // this submodule) rebases binary_config_path itself, relative to the
+    // (now-rebased, so no-longer-bare) model_file_name's dirname. Rebasing
+    // binary_config_path here too would make that rebase happen twice and
+    // produce a doubled path like
+    // "models/gauss-4-qnn/models/gauss-4-qnn/....json".
 
     if (nntr_cfg.contains("system_prompt")) {
       system_head_prompt =
@@ -459,9 +465,9 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  std::cout << "[main] Sleeping for 100 seconds..." << std::endl;
-  std::this_thread::sleep_for(std::chrono::seconds(100));
-  std::cout << "[main] Done sleeping." << std::endl;
+  // std::cout << "[main] Sleeping for 100 seconds..." << std::endl;
+  // std::this_thread::sleep_for(std::chrono::seconds(100));
+  // std::cout << "[main] Done sleeping." << std::endl;
 
   return EXIT_SUCCESS;
 }

@@ -232,6 +232,7 @@ struct QNNVar {
         nullptr == m_qnnFunctionPointers.qnnSystemInterface.systemContextFree) {
 
       ml_loge("QNN System function pointers are not populated.");
+      return StatusCode::FAILURE;
     }
 
     uint64_t bufferSize{0};
