@@ -18,8 +18,72 @@
 
 #include <thread_manager.h>
 
+// NEON SIMD for AArch64 (vectorized expf + logsumexp for uint16 logits)
+#ifdef __aarch64__
+#include <arm_neon.h>
+#endif
+
 namespace nntrainer {
 namespace ddtree {
+
+// ── Vectorized single-precision exp (Cephes expf poly, ~1 ulp) ────────────
+// NEON AArch64, no memory/LUT. Inputs always <= 0 (x = logit - max), so only
+// underflow matters; clamp keeps 2^n in range.
+#ifdef __aarch64__
+inline float32x4_t vexpf(float32x4_t x) {
+  x = vminq_f32(x, vdupq_n_f32(88.376259f));
+  x = vmaxq_f32(x, vdupq_n_f32(-87.336548f));
+  const float32x4_t LOG2EF = vdupq_n_f32(1.44269504088896341f);
+  float32x4_t fx = vrndnq_f32(vmulq_f32(x, LOG2EF));   // n = round(x*log2e)
+  x = vfmsq_f32(x, fx, vdupq_n_f32(0.693359375f));     // x -= n*C1
+  x = vfmsq_f32(x, fx, vdupq_n_f32(-2.12194440e-4f));  // x -= n*C2
+  float32x4_t z = vmulq_f32(x, x);
+  float32x4_t y = vdupq_n_f32(1.9875691500e-4f);
+  y = vfmaq_f32(vdupq_n_f32(1.3981999507e-3f), y, x);
+  y = vfmaq_f32(vdupq_n_f32(8.3334519073e-3f), y, x);
+  y = vfmaq_f32(vdupq_n_f32(4.1665795894e-2f), y, x);
+  y = vfmaq_f32(vdupq_n_f32(1.6666665459e-1f), y, x);
+  y = vfmaq_f32(vdupq_n_f32(5.0000001201e-1f), y, x);
+  y = vfmaq_f32(x, y, z);                  // y*z + x
+  y = vaddq_f32(y, vdupq_n_f32(1.0f));     // + 1
+  int32x4_t n = vshlq_n_s32(vaddq_s32(vcvtq_s32_f32(fx), vdupq_n_s32(0x7f)), 23);
+  return vmulq_f32(y, vreinterpretq_f32_s32(n));
+}
+
+// Σ exp(dequant(q_i) - mx) over a uint16 row with NEON vectorization.
+// dequant(q) = (q+offset)*scale matches quant.hpp exactly (float add).
+// 4 independent accumulators break the serial add dependency.
+inline double sumExpRowU16(const uint16_t* row, int vocab, float scale,
+                           int32_t offset, float mx) {
+  const float32x4_t vscale = vdupq_n_f32(scale);
+  const float32x4_t voff = vdupq_n_f32((float)offset);
+  const float32x4_t vmx = vdupq_n_f32(mx);
+  float32x4_t a0 = vdupq_n_f32(0.f), a1 = vdupq_n_f32(0.f),
+              a2 = vdupq_n_f32(0.f), a3 = vdupq_n_f32(0.f);
+  auto deq = [&](uint32x4_t q) {  // (q+offset)*scale - mx
+    return vsubq_f32(vmulq_f32(vaddq_f32(vcvtq_f32_u32(q), voff), vscale), vmx);
+  };
+  int i = 0;
+  for (; i + 16 <= vocab; i += 16) {
+    uint16x8_t q01 = vld1q_u16(row + i);
+    uint16x8_t q23 = vld1q_u16(row + i + 8);
+    a0 = vaddq_f32(a0, vexpf(deq(vmovl_u16(vget_low_u16(q01)))));
+    a1 = vaddq_f32(a1, vexpf(deq(vmovl_u16(vget_high_u16(q01)))));
+    a2 = vaddq_f32(a2, vexpf(deq(vmovl_u16(vget_low_u16(q23)))));
+    a3 = vaddq_f32(a3, vexpf(deq(vmovl_u16(vget_high_u16(q23)))));
+  }
+  double se = (double)vaddvq_f32(vaddq_f32(vaddq_f32(a0, a1), vaddq_f32(a2, a3)));
+  // Scalar tail for remaining elements
+  for (; i < vocab; ++i)
+    se += std::exp((double)((row[i] + offset) * scale) - (double)mx);
+  return se;
+}
+#endif // __aarch64__
+
+// Helper for dequant uint16 logits (used in fallback on non-NEON platforms)
+inline float dequantU16(uint16_t q, float scale, int32_t offset) {
+  return (static_cast<float>(q) + static_cast<float>(offset)) * scale;
+}
 
 DDTreeStructure buildTree(const float *draftLogits, int depthLimit, int vocab,
                           const DDTreeConfig &cfg) {
@@ -212,6 +276,185 @@ DDTreeStructure buildTree(const float *draftLogits, int depthLimit, int vocab,
         t.visibility[static_cast<size_t>(parent) * currentLength + j];
     t.visibility[static_cast<size_t>(index) * currentLength + index] = 1;
   }
+  return t;
+}
+
+// Optimized uint16 buildTree (2026-06-24): dequants on-the-fly with NEON vexpf.
+DDTreeStructure buildTree(const uint16_t *draftLogits, float scale,
+                          int32_t offset, int depthLimit, int vocab,
+                          int budget) {
+  DDTreeStructure t;
+
+  // Empty case: budget<=0 or depth_limit==0 -> root only.
+  if (budget <= 0 || depthLimit == 0) {
+    t.nodeCount = 0;
+    t.currentLength = 1;
+    t.nodeTokenIds.clear();
+    t.nodeDepths.clear();
+    t.childMaps.assign(1, std::unordered_map<int32_t, int32_t>());
+    t.visibility.assign(1, 1);
+    return t;
+  }
+
+  const int maxNodes = budget + 1;
+
+  struct Entry {
+    double negLogw;
+    std::vector<int32_t> ranks;
+    int parentIndex;
+    int depth;
+    int rank;
+    double logw;
+  };
+
+  auto pythonLess = [](const Entry &a, const Entry &b) {
+    if (a.negLogw != b.negLogw) return a.negLogw < b.negLogw;
+    if (a.ranks != b.ranks) return a.ranks < b.ranks;
+    if (a.parentIndex != b.parentIndex) return a.parentIndex < b.parentIndex;
+    if (a.depth != b.depth) return a.depth < b.depth;
+    if (a.rank != b.rank) return a.rank < b.rank;
+    return a.logw < b.logw;
+  };
+
+  // Root: dequant row 0, find top-k and logsumexp
+  const uint16_t *root_row = draftLogits;
+  std::vector<int32_t> root_topk_tokens, root_topk_logprobs_raw;
+
+  // Find max in root row for logsumexp
+  float maxLogit = dequantU16(root_row[0], scale, offset);
+  for (int i = 1; i < vocab; ++i) {
+    float val = dequantU16(root_row[i], scale, offset);
+    if (val > maxLogit) maxLogit = val;
+  }
+
+  // Compute logsumexp with NEON vexpf if available
+  double sumExp = 0.0;
+#ifdef __aarch64__
+  sumExp = sumExpRowU16(root_row, vocab, scale, offset, maxLogit);
+#else
+  for (int i = 0; i < vocab; ++i)
+    sumExp += std::exp((double)dequantU16(root_row[i], scale, offset) -
+                       (double)maxLogit);
+#endif
+  float logZ = static_cast<float>(maxLogit + std::log(sumExp));
+
+  // Top-k selection (threshold-based) - simplified for uint16 path
+  std::vector<std::pair<float, int32_t>> candidates;
+  for (int i = 0; i < vocab; ++i) {
+    float logit = dequantU16(root_row[i], scale, offset);
+    candidates.push_back({logit - logZ, i});
+  }
+  std::partial_sort(candidates.begin(),
+                    candidates.begin() + std::min((int)candidates.size(), budget + 1),
+                    candidates.end(),
+                    [](const auto &a, const auto &b) { return a.first > b.first; });
+
+  std::priority_queue<Entry, std::vector<Entry>,
+                      std::function<bool(const Entry &, const Entry &)>>
+    pq(pythonLess);
+
+  // Heap initialization from root top-k
+  for (int r = 0; r < (int)std::min((int)candidates.size(), budget + 1); ++r) {
+    Entry e;
+    e.negLogw = -candidates[r].first;
+    e.ranks.push_back(r);
+    e.parentIndex = -1;  // root
+    e.depth = 0;
+    e.rank = r;
+    e.logw = candidates[r].first;
+    pq.push(e);
+  }
+
+  // Node lists
+  std::vector<int32_t> nodeTokenIds, nodeDepths, nodeParents, nodeRanks;
+
+  // Build tree
+  while (!pq.empty()) {
+    Entry cur = pq.top();
+    pq.pop();
+
+    if ((int)nodeTokenIds.size() >= budget) break;
+
+    // Find child row (depth-dependent logits row; simplified for uint16)
+    if (cur.depth + 1 >= depthLimit) continue;
+
+    const uint16_t *child_row = draftLogits + static_cast<size_t>(cur.depth + 1) * vocab;
+
+    // Dequant and find max for this row
+    float childMaxLogit = dequantU16(child_row[0], scale, offset);
+    for (int i = 1; i < vocab; ++i) {
+      float val = dequantU16(child_row[i], scale, offset);
+      if (val > childMaxLogit) childMaxLogit = val;
+    }
+
+    // Compute logsumexp with NEON
+    double childSumExp = 0.0;
+#ifdef __aarch64__
+    childSumExp = sumExpRowU16(child_row, vocab, scale, offset, childMaxLogit);
+#else
+    for (int i = 0; i < vocab; ++i)
+      childSumExp += std::exp((double)dequantU16(child_row[i], scale, offset) -
+                              (double)childMaxLogit);
+#endif
+    float childLogZ = static_cast<float>(childMaxLogit + std::log(childSumExp));
+
+    // Top-k for this row
+    std::vector<std::pair<float, int32_t>> childCandidates;
+    for (int i = 0; i < vocab; ++i) {
+      float logit = dequantU16(child_row[i], scale, offset);
+      childCandidates.push_back({logit - childLogZ, i});
+    }
+    std::partial_sort(
+        childCandidates.begin(),
+        childCandidates.begin() + std::min((int)childCandidates.size(), budget + 1),
+        childCandidates.end(),
+        [](const auto &a, const auto &b) { return a.first > b.first; });
+
+    // Add children to heap
+    for (int r = 0; r < (int)std::min((int)childCandidates.size(), budget + 1); ++r) {
+      Entry e;
+      e.negLogw = -(cur.logw + childCandidates[r].first);
+      e.ranks = cur.ranks;
+      e.ranks.push_back(r);
+      e.parentIndex = (int)nodeTokenIds.size();
+      e.depth = cur.depth + 1;
+      e.rank = r;
+      e.logw = cur.logw + childCandidates[r].first;
+      pq.push(e);
+    }
+
+    // Record this node
+    nodeTokenIds.push_back(childCandidates[0].second);
+    nodeDepths.push_back(cur.depth + 1);
+    nodeParents.push_back(cur.parentIndex == -1 ? 0 : cur.parentIndex);
+    nodeRanks.push_back(cur.rank);
+  }
+
+  // Build output structure
+  t.nodeCount = (int)nodeTokenIds.size();
+  t.currentLength = t.nodeCount + 1;
+  t.nodeTokenIds = nodeTokenIds;
+  t.nodeDepths = nodeDepths;
+
+  // Child map and visibility
+  t.childMaps.assign(t.currentLength, std::unordered_map<int32_t, int32_t>());
+  for (int i = 0; i < (int)nodeTokenIds.size(); ++i) {
+    int parent = (i == 0 && nodeParents[i] == 0) ? 0 : (nodeParents[i] + 1);
+    int node = i + 1;
+    t.childMaps[parent][nodeTokenIds[i]] = node;
+  }
+
+  // Visibility: ancestors of each node
+  t.visibility.assign(static_cast<size_t>(t.currentLength) * t.currentLength, 0);
+  for (int i = 0; i < t.currentLength; ++i) t.visibility[i * t.currentLength + i] = 1;
+  for (int i = 1; i < t.currentLength; ++i) {
+    int parent = (i == 1 && nodeParents[0] == 0) ? 0 : (nodeParents[i - 1] + 1);
+    for (int j = 0; j < t.currentLength; ++j)
+      t.visibility[i * t.currentLength + j] =
+        t.visibility[parent * t.currentLength + j];
+    t.visibility[i * t.currentLength + i] = 1;
+  }
+
   return t;
 }
 
