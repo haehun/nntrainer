@@ -287,6 +287,13 @@ int decodeSigned4(uint8_t nibble) {
                           : static_cast<int>(nibble);
 }
 
+// This TU builds with -O3 -ffast-math (CAUSALLM_COMMON_CFLAGS); the LUT
+// decode/requant below must stay IEEE-exact so the produced input_embeds match
+// the reference runtime (gauss4.cpp embedding.hpp requantRow16) bit-for-bit —
+// fast-math reassociation/reciprocal tricks would perturb the last LSB.
+#pragma float_control(push)
+#pragma float_control(precise, on)
+
 uint16_t clampFloatToU16(float value) {
   if (!std::isfinite(value))
     return value > 0.0f ? std::numeric_limits<uint16_t>::max() : 0;
@@ -438,14 +445,20 @@ void decode_quant_lut_row_to_uint16(const QuantLut &lut, size_t token_idx,
     const float hi =
       decodePacked4BitValue(lut, token_idx, byte >> 4, layer_scale);
 
-    output[i * 2] = clampRoundedToU16(
-      std::round(static_cast<double>(lo) / output_quant_scale) -
-      output_quant_offset);
-    output[i * 2 + 1] = clampRoundedToU16(
-      std::round(static_cast<double>(hi) / output_quant_scale) -
-      output_quant_offset);
+    // gauss4.cpp quant.hpp requant16 parity: FLOAT divide + lroundf
+    // (half-away-from-zero), NOT double divide + std::round — the double
+    // division rounds differently in the last bit often enough to flip
+    // near-tie argmaxes thousands of steps downstream.
+    const long qlo = lroundf(lo / output_quant_scale) - output_quant_offset;
+    const long qhi = lroundf(hi / output_quant_scale) - output_quant_offset;
+    output[i * 2] =
+      static_cast<uint16_t>(std::max(0L, std::min(65535L, qlo)));
+    output[i * 2 + 1] =
+      static_cast<uint16_t>(std::max(0L, std::min(65535L, qhi)));
   }
 }
+
+#pragma float_control(pop)
 
 EmbeddingLayer::EmbeddingLayer() :
   LayerImpl(),
