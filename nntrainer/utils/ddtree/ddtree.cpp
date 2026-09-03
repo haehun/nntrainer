@@ -34,9 +34,9 @@ inline float32x4_t vexpf(float32x4_t x) {
   x = vminq_f32(x, vdupq_n_f32(88.376259f));
   x = vmaxq_f32(x, vdupq_n_f32(-87.336548f));
   const float32x4_t LOG2EF = vdupq_n_f32(1.44269504088896341f);
-  float32x4_t fx = vrndnq_f32(vmulq_f32(x, LOG2EF));   // n = round(x*log2e)
-  x = vfmsq_f32(x, fx, vdupq_n_f32(0.693359375f));     // x -= n*C1
-  x = vfmsq_f32(x, fx, vdupq_n_f32(-2.12194440e-4f));  // x -= n*C2
+  float32x4_t fx = vrndnq_f32(vmulq_f32(x, LOG2EF));  // n = round(x*log2e)
+  x = vfmsq_f32(x, fx, vdupq_n_f32(0.693359375f));    // x -= n*C1
+  x = vfmsq_f32(x, fx, vdupq_n_f32(-2.12194440e-4f)); // x -= n*C2
   float32x4_t z = vmulq_f32(x, x);
   float32x4_t y = vdupq_n_f32(1.9875691500e-4f);
   y = vfmaq_f32(vdupq_n_f32(1.3981999507e-3f), y, x);
@@ -44,23 +44,24 @@ inline float32x4_t vexpf(float32x4_t x) {
   y = vfmaq_f32(vdupq_n_f32(4.1665795894e-2f), y, x);
   y = vfmaq_f32(vdupq_n_f32(1.6666665459e-1f), y, x);
   y = vfmaq_f32(vdupq_n_f32(5.0000001201e-1f), y, x);
-  y = vfmaq_f32(x, y, z);                  // y*z + x
-  y = vaddq_f32(y, vdupq_n_f32(1.0f));     // + 1
-  int32x4_t n = vshlq_n_s32(vaddq_s32(vcvtq_s32_f32(fx), vdupq_n_s32(0x7f)), 23);
+  y = vfmaq_f32(x, y, z);              // y*z + x
+  y = vaddq_f32(y, vdupq_n_f32(1.0f)); // + 1
+  int32x4_t n =
+    vshlq_n_s32(vaddq_s32(vcvtq_s32_f32(fx), vdupq_n_s32(0x7f)), 23);
   return vmulq_f32(y, vreinterpretq_f32_s32(n));
 }
 
 // Σ exp(dequant(q_i) - mx) over a uint16 row with NEON vectorization.
 // dequant(q) = (q+offset)*scale matches quant.hpp exactly (float add).
 // 4 independent accumulators break the serial add dependency.
-inline double sumExpRowU16(const uint16_t* row, int vocab, float scale,
+inline double sumExpRowU16(const uint16_t *row, int vocab, float scale,
                            int32_t offset, float mx) {
   const float32x4_t vscale = vdupq_n_f32(scale);
   const float32x4_t voff = vdupq_n_f32((float)offset);
   const float32x4_t vmx = vdupq_n_f32(mx);
   float32x4_t a0 = vdupq_n_f32(0.f), a1 = vdupq_n_f32(0.f),
               a2 = vdupq_n_f32(0.f), a3 = vdupq_n_f32(0.f);
-  auto deq = [&](uint32x4_t q) {  // (q+offset)*scale - mx
+  auto deq = [&](uint32x4_t q) { // (q+offset)*scale - mx
     return vsubq_f32(vmulq_f32(vaddq_f32(vcvtq_f32_u32(q), voff), vscale), vmx);
   };
   int i = 0;
@@ -72,7 +73,8 @@ inline double sumExpRowU16(const uint16_t* row, int vocab, float scale,
     a2 = vaddq_f32(a2, vexpf(deq(vmovl_u16(vget_low_u16(q23)))));
     a3 = vaddq_f32(a3, vexpf(deq(vmovl_u16(vget_high_u16(q23)))));
   }
-  double se = (double)vaddvq_f32(vaddq_f32(vaddq_f32(a0, a1), vaddq_f32(a2, a3)));
+  double se =
+    (double)vaddvq_f32(vaddq_f32(vaddq_f32(a0, a1), vaddq_f32(a2, a3)));
   // Scalar tail for remaining elements
   for (; i < vocab; ++i)
     se += std::exp((double)((row[i] + offset) * scale) - (double)mx);
@@ -80,110 +82,104 @@ inline double sumExpRowU16(const uint16_t* row, int vocab, float scale,
 }
 #endif // __aarch64__
 
-// Helper for dequant uint16 logits (used in fallback on non-NEON platforms)
+// Dequantize one UFIXED16 logit: (q + offset) * scale, fp32.
 inline float dequantU16(uint16_t q, float scale, int32_t offset) {
   return (static_cast<float>(q) + static_cast<float>(offset)) * scale;
 }
 
-DDTreeStructure buildTree(const float *draftLogits, int depthLimit, int vocab,
-                          const DDTreeConfig &cfg) {
-  DDTreeStructure t;
+namespace {
 
-  // Empty case (ddtree.py 98-108): budget<=0 or depth_limit==0 -> root only.
-  if (cfg.budget <= 0 || depthLimit == 0) {
-    t.nodeCount = 0;
-    t.currentLength = 1;
-    t.parents = {-1};
-    t.childMaps.resize(1);
-    t.visibility = {1};
-    return t;
-  }
+// Top-k candidate; "better" == (higher logit, lower token on a tie), matching
+// torch.topk's (logit desc, token index asc) total order.
+struct Cand {
+  float logit;
+  int32_t token;
+};
+inline bool candBetter(const Cand &a, const Cand &b) {
+  if (a.logit != b.logit)
+    return a.logit > b.logit; // higher logit is better
+  return a.token < b.token;   // tie: lower token index is better
+}
 
-  const int topk = std::min(cfg.budget, vocab);
-
-  // Per-row top-k: top_log_probs (fp32) and top_token_ids, sorted by
-  // (logit desc, token index asc) to match torch.topk on CPU.
-  // topLogProbs[d][r] = top_logit - logsumexp(row d). (ddtree.py 114-117)
-  //
-  // Each depth row is independent, so the rows are computed in parallel via the
-  // nntrainer ThreadManager. The math is byte-identical to the original
-  // sequential version (golden parity): the max equals the full-row max, and
-  // logsumexp is still the double-precision exp accumulation in token-index
-  // order. Only the top-k selection method changed (see the scan below).
-  std::vector<std::vector<float>> topLogProbs(depthLimit);
-  std::vector<std::vector<int32_t>> topTokenIds(depthLimit);
-
-  // Top-k candidate; "better" == (higher logit, lower token on a tie), matching
-  // torch.topk's (logit desc, token index asc) total order.
-  struct Cand {
-    float logit;
-    int32_t token;
-  };
-  auto better = [](const Cand &a, const Cand &b) {
-    if (a.logit != b.logit)
-      return a.logit > b.logit; // higher logit is better
-    return a.token < b.token;   // tie: lower token index is better
-  };
-
-  auto &tm = ThreadManager::Global();
-  tm.parallel_for(0, static_cast<size_t>(depthLimit), [&](size_t d) {
-    const float *row = draftLogits + d * static_cast<size_t>(vocab);
-
-    // Single sequential pass top-k via a threshold + small array: the hot path
-    // is one well-predicted `x < thresh` compare that rejects the ~99.98% of
-    // tokens outside the top-k, so it avoids the per-element priority_queue
-    // push/pop and Cand churn. `thresh` is the worst kept logit once `buf` is
-    // full; ties (x == thresh) fall through to the full `better` comparison so
-    // the lower token index still wins. The selected set/order is identical to
-    // a partial_sort (logit/token is a total order), preserving golden parity.
-    std::vector<Cand> buf;
-    buf.reserve(topk);
-    float thresh = -std::numeric_limits<float>::infinity();
-    int worstPos = 0;
-    for (int i = 0; i < vocab; ++i) {
-      const float x = row[i];
-      if (static_cast<int>(buf.size()) < topk) {
-        buf.push_back(Cand{x, i});
-        if (static_cast<int>(buf.size()) == topk) {
-          worstPos = 0;
-          for (int j = 1; j < topk; ++j)
-            if (better(buf[worstPos], buf[j]))
-              worstPos = j;
-          thresh = buf[worstPos].logit;
-        }
-        continue;
+// One-pass top-k + double-precision logsumexp over one logits row.
+// `rowAt(i)` returns the fp32 logit of vocab index i — a plain load for the
+// float overload, a dequantU16 for the uint16 overload — so BOTH overloads run
+// byte-identical top-k selection (fp32 compares, token-index-order total
+// order). `sumExpAt(maxLogit)` computes Σ exp(rowAt(i) - maxLogit) over the
+// whole row; the float overload sums the plain array, while the uint16
+// overload plugs in sumExpRowU16() (NEON-vectorized on __aarch64__) so the
+// dequant + exp + reduction runs vectorized instead of through the scalar
+// per-element `rowAt` callback. Both paths accumulate in double and in
+// token-index order, so logZ is byte-identical either way (golden parity
+// §6.2). Fills logProbs/tokens best-first (torch.topk parity).
+template <typename RowAt, typename SumExpAt>
+void scanRowTopK(RowAt rowAt, SumExpAt sumExpAt, int vocab, int topk,
+                 std::vector<float> &logProbs, std::vector<int32_t> &tokens) {
+  // Single sequential pass top-k via a threshold + small array: the hot path
+  // is one well-predicted `x < thresh` compare that rejects the ~99.98% of
+  // tokens outside the top-k, so it avoids the per-element priority_queue
+  // push/pop and Cand churn. `thresh` is the worst kept logit once `buf` is
+  // full; ties (x == thresh) fall through to the full `candBetter` comparison
+  // so the lower token index still wins. The selected set/order is identical
+  // to a partial_sort (logit/token is a total order), preserving golden
+  // parity.
+  std::vector<Cand> buf;
+  buf.reserve(topk);
+  float thresh = -std::numeric_limits<float>::infinity();
+  int worstPos = 0;
+  for (int i = 0; i < vocab; ++i) {
+    const float x = rowAt(i);
+    if (static_cast<int>(buf.size()) < topk) {
+      buf.push_back(Cand{x, i});
+      if (static_cast<int>(buf.size()) == topk) {
+        worstPos = 0;
+        for (int j = 1; j < topk; ++j)
+          if (candBetter(buf[worstPos], buf[j]))
+            worstPos = j;
+        thresh = buf[worstPos].logit;
       }
-      if (x < thresh)
-        continue; // outside top-k: single-compare fast reject
-      const Cand c{x, i};
-      if (!better(c, buf[worstPos]))
-        continue; // x == thresh tie resolved by token index
-      buf[worstPos] = c;
-      worstPos = 0; // recompute worst (rare: only on an actual insertion)
-      for (int j = 1; j < topk; ++j)
-        if (better(buf[worstPos], buf[j]))
-          worstPos = j;
-      thresh = buf[worstPos].logit;
+      continue;
     }
-    std::sort(buf.begin(), buf.end(), better); // best-first (== partial_sort)
-    // The global max is always kept, so it is the best candidate; reuse it for
-    // logsumexp instead of a separate full-row max scan.
-    const float maxLogit = buf[0].logit;
+    if (x < thresh)
+      continue; // outside top-k: single-compare fast reject
+    const Cand c{x, i};
+    if (!candBetter(c, buf[worstPos]))
+      continue; // x == thresh tie resolved by token index
+    buf[worstPos] = c;
+    worstPos = 0; // recompute worst (rare: only on an actual insertion)
+    for (int j = 1; j < topk; ++j)
+      if (candBetter(buf[worstPos], buf[j]))
+        worstPos = j;
+    thresh = buf[worstPos].logit;
+  }
+  std::sort(buf.begin(), buf.end(), candBetter); // best-first (== partial_sort)
+  // The global max is always kept, so it is the best candidate; reuse it for
+  // logsumexp instead of a separate full-row max scan.
+  const float maxLogit = buf[0].logit;
 
-    // logsumexp in double for accuracy (token-index order, parity §6.2);
-    // result stored as fp32.
-    double sumExp = 0.0;
-    for (int i = 0; i < vocab; ++i)
-      sumExp += std::exp(static_cast<double>(row[i]) - maxLogit);
-    const float logZ = static_cast<float>(maxLogit + std::log(sumExp));
+  // logsumexp in double for accuracy (token-index order, parity §6.2);
+  // result stored as fp32.
+  const double sumExp = sumExpAt(maxLogit);
+  const float logZ = static_cast<float>(maxLogit + std::log(sumExp));
 
-    topLogProbs[d].resize(topk);
-    topTokenIds[d].resize(topk);
-    for (int r = 0; r < topk; ++r) {
-      topTokenIds[d][r] = buf[r].token;
-      topLogProbs[d][r] = buf[r].logit - logZ; // fp32 subtraction
-    }
-  });
+  logProbs.resize(topk);
+  tokens.resize(topk);
+  for (int r = 0; r < topk; ++r) {
+    tokens[r] = buf[r].token;
+    logProbs[r] = buf[r].logit - logZ; // fp32 subtraction
+  }
+}
+
+// Heap expansion + visibility from precomputed per-depth top-k — the part of
+// buildTree that is independent of the logits representation. Shared by the
+// float and uint16 overloads so they produce identical trees for identical
+// dequantized logits (and match gauss4.cpp's builder, which uses the same
+// ddtree.py heap discipline).
+DDTreeStructure
+buildTreeFromTopK(const std::vector<std::vector<float>> &topLogProbs,
+                  const std::vector<std::vector<int32_t>> &topTokenIds,
+                  int depthLimit, int topk, int budget) {
+  DDTreeStructure t;
 
   // Heap entry mirrors the Python tuple (-logw, ranks, parent, depth, rank,
   // logw). Comparison is the Python tuple order; ranks is variable-length
@@ -221,7 +217,7 @@ DDTreeStructure buildTree(const float *draftLogits, int depthLimit, int vocab,
   heap.push(
     Entry{-firstLogw, {0}, /*parent*/ 0, /*depth*/ 1, /*rank*/ 0, firstLogw});
 
-  t.parents.assign(cfg.budget + 1, 0);
+  t.parents.assign(budget + 1, 0);
   t.parents[0] = -1;
   t.childMaps.clear();
   t.childMaps.emplace_back(); // root placeholder child map
@@ -229,7 +225,7 @@ DDTreeStructure buildTree(const float *draftLogits, int depthLimit, int vocab,
   t.nodeDepths.clear();
 
   int nodeCount = 0;
-  while (!heap.empty() && nodeCount < cfg.budget) {
+  while (!heap.empty() && nodeCount < budget) {
     Entry e = heap.top();
     heap.pop();
 
@@ -279,183 +275,97 @@ DDTreeStructure buildTree(const float *draftLogits, int depthLimit, int vocab,
   return t;
 }
 
-// Optimized uint16 buildTree (2026-06-24): dequants on-the-fly with NEON vexpf.
-DDTreeStructure buildTree(const uint16_t *draftLogits, float scale,
-                          int32_t offset, int depthLimit, int vocab,
-                          int budget) {
+} // namespace
+
+DDTreeStructure buildTree(const float *draftLogits, int depthLimit, int vocab,
+                          const DDTreeConfig &cfg) {
   DDTreeStructure t;
 
-  // Empty case: budget<=0 or depth_limit==0 -> root only.
-  if (budget <= 0 || depthLimit == 0) {
+  // Empty case (ddtree.py 98-108): budget<=0 or depth_limit==0 -> root only.
+  if (cfg.budget <= 0 || depthLimit == 0) {
     t.nodeCount = 0;
     t.currentLength = 1;
-    t.nodeTokenIds.clear();
-    t.nodeDepths.clear();
-    t.childMaps.assign(1, std::unordered_map<int32_t, int32_t>());
-    t.visibility.assign(1, 1);
+    t.parents = {-1};
+    t.childMaps.resize(1);
+    t.visibility = {1};
     return t;
   }
 
-  const int maxNodes = budget + 1;
+  const int topk = std::min(cfg.budget, vocab);
 
-  struct Entry {
-    double negLogw;
-    std::vector<int32_t> ranks;
-    int parentIndex;
-    int depth;
-    int rank;
-    double logw;
-  };
+  // Per-row top-k: topLogProbs[d][r] = top_logit - logsumexp(row d), sorted by
+  // (logit desc, token index asc) to match torch.topk on CPU (ddtree.py
+  // 114-117). Each depth row is independent -> parallel via ThreadManager.
+  // Selection + logZ math live in scanRowTopK (shared with the uint16
+  // overload for byte-identical trees).
+  std::vector<std::vector<float>> topLogProbs(depthLimit);
+  std::vector<std::vector<int32_t>> topTokenIds(depthLimit);
 
-  auto pythonLess = [](const Entry &a, const Entry &b) {
-    if (a.negLogw != b.negLogw) return a.negLogw < b.negLogw;
-    if (a.ranks != b.ranks) return a.ranks < b.ranks;
-    if (a.parentIndex != b.parentIndex) return a.parentIndex < b.parentIndex;
-    if (a.depth != b.depth) return a.depth < b.depth;
-    if (a.rank != b.rank) return a.rank < b.rank;
-    return a.logw < b.logw;
-  };
+  auto &tm = ThreadManager::Global();
+  tm.parallel_for(0, static_cast<size_t>(depthLimit), [&](size_t d) {
+    const float *row = draftLogits + d * static_cast<size_t>(vocab);
+    scanRowTopK([row](int i) { return row[i]; },
+                [row, vocab](float maxLogit) {
+                  double sumExp = 0.0;
+                  for (int i = 0; i < vocab; ++i)
+                    sumExp += std::exp(static_cast<double>(row[i]) - maxLogit);
+                  return sumExp;
+                },
+                vocab, topk, topLogProbs[d], topTokenIds[d]);
+  });
 
-  // Root: dequant row 0, find top-k and logsumexp
-  const uint16_t *root_row = draftLogits;
-  std::vector<int32_t> root_topk_tokens, root_topk_logprobs_raw;
+  return buildTreeFromTopK(topLogProbs, topTokenIds, depthLimit, topk,
+                           cfg.budget);
+}
 
-  // Find max in root row for logsumexp
-  float maxLogit = dequantU16(root_row[0], scale, offset);
-  for (int i = 1; i < vocab; ++i) {
-    float val = dequantU16(root_row[i], scale, offset);
-    if (val > maxLogit) maxLogit = val;
+// uint16 overload: identical tree to the float overload for the same
+// dequantized logits. Dequantizes (q + offset) * scale on the fly inside the
+// shared scanRowTopK (fp32 values, so selection ties and logZ accumulation are
+// byte-identical to running the float overload on a pre-dequantized buffer) —
+// no horizon*vocab fp32 staging buffer. Top-k selection still goes through
+// the scalar `rowAt` callback, but logsumexp is computed via sumExpRowU16(),
+// which is NEON-vectorized on __aarch64__ (falls back to a scalar loop
+// otherwise) — the same fused-dequant shape as gauss4.cpp engine/ddtree.cpp
+// buildTree(const uint16_t*, ...).
+DDTreeStructure buildTree(const uint16_t *draftLogits, float scale,
+                          int32_t offset, int depthLimit, int vocab,
+                          int budget) {
+  // Empty case (ddtree.py 98-108): budget<=0 or depth_limit==0 -> root only.
+  if (budget <= 0 || depthLimit == 0) {
+    DDTreeStructure t;
+    t.nodeCount = 0;
+    t.currentLength = 1;
+    t.parents = {-1};
+    t.childMaps.resize(1);
+    t.visibility = {1};
+    return t;
   }
 
-  // Compute logsumexp with NEON vexpf if available
-  double sumExp = 0.0;
+  const int topk = std::min(budget, vocab);
+
+  std::vector<std::vector<float>> topLogProbs(depthLimit);
+  std::vector<std::vector<int32_t>> topTokenIds(depthLimit);
+
+  auto &tm = ThreadManager::Global();
+  tm.parallel_for(0, static_cast<size_t>(depthLimit), [&](size_t d) {
+    const uint16_t *row = draftLogits + d * static_cast<size_t>(vocab);
+    scanRowTopK(
+      [row, scale, offset](int i) { return dequantU16(row[i], scale, offset); },
+      [row, vocab, scale, offset](float maxLogit) -> double {
 #ifdef __aarch64__
-  sumExp = sumExpRowU16(root_row, vocab, scale, offset, maxLogit);
+        return sumExpRowU16(row, vocab, scale, offset, maxLogit);
 #else
-  for (int i = 0; i < vocab; ++i)
-    sumExp += std::exp((double)dequantU16(root_row[i], scale, offset) -
-                       (double)maxLogit);
+        double sumExp = 0.0;
+        for (int i = 0; i < vocab; ++i)
+          sumExp += std::exp(static_cast<double>(dequantU16(row[i], scale, offset)) -
+                             static_cast<double>(maxLogit));
+        return sumExp;
 #endif
-  float logZ = static_cast<float>(maxLogit + std::log(sumExp));
+      },
+      vocab, topk, topLogProbs[d], topTokenIds[d]);
+  });
 
-  // Top-k selection (threshold-based) - simplified for uint16 path
-  std::vector<std::pair<float, int32_t>> candidates;
-  for (int i = 0; i < vocab; ++i) {
-    float logit = dequantU16(root_row[i], scale, offset);
-    candidates.push_back({logit - logZ, i});
-  }
-  std::partial_sort(candidates.begin(),
-                    candidates.begin() + std::min((int)candidates.size(), budget + 1),
-                    candidates.end(),
-                    [](const auto &a, const auto &b) { return a.first > b.first; });
-
-  std::priority_queue<Entry, std::vector<Entry>,
-                      std::function<bool(const Entry &, const Entry &)>>
-    pq(pythonLess);
-
-  // Heap initialization from root top-k
-  for (int r = 0; r < (int)std::min((int)candidates.size(), budget + 1); ++r) {
-    Entry e;
-    e.negLogw = -candidates[r].first;
-    e.ranks.push_back(r);
-    e.parentIndex = -1;  // root
-    e.depth = 0;
-    e.rank = r;
-    e.logw = candidates[r].first;
-    pq.push(e);
-  }
-
-  // Node lists
-  std::vector<int32_t> nodeTokenIds, nodeDepths, nodeParents, nodeRanks;
-
-  // Build tree
-  while (!pq.empty()) {
-    Entry cur = pq.top();
-    pq.pop();
-
-    if ((int)nodeTokenIds.size() >= budget) break;
-
-    // Find child row (depth-dependent logits row; simplified for uint16)
-    if (cur.depth + 1 >= depthLimit) continue;
-
-    const uint16_t *child_row = draftLogits + static_cast<size_t>(cur.depth + 1) * vocab;
-
-    // Dequant and find max for this row
-    float childMaxLogit = dequantU16(child_row[0], scale, offset);
-    for (int i = 1; i < vocab; ++i) {
-      float val = dequantU16(child_row[i], scale, offset);
-      if (val > childMaxLogit) childMaxLogit = val;
-    }
-
-    // Compute logsumexp with NEON
-    double childSumExp = 0.0;
-#ifdef __aarch64__
-    childSumExp = sumExpRowU16(child_row, vocab, scale, offset, childMaxLogit);
-#else
-    for (int i = 0; i < vocab; ++i)
-      childSumExp += std::exp((double)dequantU16(child_row[i], scale, offset) -
-                              (double)childMaxLogit);
-#endif
-    float childLogZ = static_cast<float>(childMaxLogit + std::log(childSumExp));
-
-    // Top-k for this row
-    std::vector<std::pair<float, int32_t>> childCandidates;
-    for (int i = 0; i < vocab; ++i) {
-      float logit = dequantU16(child_row[i], scale, offset);
-      childCandidates.push_back({logit - childLogZ, i});
-    }
-    std::partial_sort(
-        childCandidates.begin(),
-        childCandidates.begin() + std::min((int)childCandidates.size(), budget + 1),
-        childCandidates.end(),
-        [](const auto &a, const auto &b) { return a.first > b.first; });
-
-    // Add children to heap
-    for (int r = 0; r < (int)std::min((int)childCandidates.size(), budget + 1); ++r) {
-      Entry e;
-      e.negLogw = -(cur.logw + childCandidates[r].first);
-      e.ranks = cur.ranks;
-      e.ranks.push_back(r);
-      e.parentIndex = (int)nodeTokenIds.size();
-      e.depth = cur.depth + 1;
-      e.rank = r;
-      e.logw = cur.logw + childCandidates[r].first;
-      pq.push(e);
-    }
-
-    // Record this node
-    nodeTokenIds.push_back(childCandidates[0].second);
-    nodeDepths.push_back(cur.depth + 1);
-    nodeParents.push_back(cur.parentIndex == -1 ? 0 : cur.parentIndex);
-    nodeRanks.push_back(cur.rank);
-  }
-
-  // Build output structure
-  t.nodeCount = (int)nodeTokenIds.size();
-  t.currentLength = t.nodeCount + 1;
-  t.nodeTokenIds = nodeTokenIds;
-  t.nodeDepths = nodeDepths;
-
-  // Child map and visibility
-  t.childMaps.assign(t.currentLength, std::unordered_map<int32_t, int32_t>());
-  for (int i = 0; i < (int)nodeTokenIds.size(); ++i) {
-    int parent = (i == 0 && nodeParents[i] == 0) ? 0 : (nodeParents[i] + 1);
-    int node = i + 1;
-    t.childMaps[parent][nodeTokenIds[i]] = node;
-  }
-
-  // Visibility: ancestors of each node
-  t.visibility.assign(static_cast<size_t>(t.currentLength) * t.currentLength, 0);
-  for (int i = 0; i < t.currentLength; ++i) t.visibility[i * t.currentLength + i] = 1;
-  for (int i = 1; i < t.currentLength; ++i) {
-    int parent = (i == 1 && nodeParents[0] == 0) ? 0 : (nodeParents[i - 1] + 1);
-    for (int j = 0; j < t.currentLength; ++j)
-      t.visibility[i * t.currentLength + j] =
-        t.visibility[parent * t.currentLength + j];
-    t.visibility[i * t.currentLength + i] = 1;
-  }
-
-  return t;
+  return buildTreeFromTopK(topLogProbs, topTokenIds, depthLimit, topk, budget);
 }
 
 CompiledTree compile(int32_t rootTokenId, int start, int pastLength,
