@@ -25,6 +25,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -37,6 +38,7 @@
 
 #include <AEEStdErr.h>
 #include <remote.h>
+#include <rpcmem.h>
 
 #include "nntr_hvx.h"
 
@@ -920,6 +922,118 @@ TEST_F(HmxAttnF16, AutoTilingMatchesReference) {
 TEST_F(HmxAttnF16, ReportPhaseTimes) {
   RunShape({128, 896, 1024, 16, 4, 128, 0, 16, 128}, 40.0, /*report=*/true);
   RunShape({128, 0, 128, 16, 4, 128, 0, 16, 64}, 40.0, /*report=*/true);
+}
+
+/**
+ * The KV cache in rpcmem (Phase 4d). An rpcmem block is a dma-buf the
+ * rpcmem library registers with FastRPC: passed as a buffer argument, the
+ * used range is mapped into the DSP and cache-maintained, where a heap
+ * buffer is copied into a FastRPC scratch buffer on every call. Same
+ * kernel, same bytes, so the outputs must be identical; the host-side
+ * call time is the difference, and is reported per shape.
+ */
+class HtpSharedKvCache : public HmxAttnF16 {
+protected:
+  static int64_t now_us() {
+    return std::chrono::duration_cast<std::chrono::microseconds>(
+             std::chrono::steady_clock::now().time_since_epoch())
+      .count();
+  }
+
+  /**
+   * @brief Runs @a s with the cache on the heap and in rpcmem; median
+   *        host-side call time of @a iters runs each, after one warm-up.
+   */
+  void RunBoth(const AttnShape &s, bool decode, int iters = 8) {
+    SCOPED_TRACE(std::string(decode ? "decode" : "prefill") + " n_q=" +
+                 std::to_string(s.n_q) + " to=" + std::to_string(s.cache_to));
+    const size_t q_elems = static_cast<size_t>(s.n_q) * s.n_head_q * s.head_dim;
+    const size_t kv_elems =
+      static_cast<size_t>(s.cache_to) * s.n_head_kv * s.head_dim;
+    const size_t kv_bytes = kv_elems * sizeof(uint16_t);
+    std::vector<float> q(q_elems);
+    fill_deterministic(q, 0x5A4E0001u, 3.0f);
+    std::vector<uint16_t> k(kv_elems), v(kv_elems);
+    fill_hf(k, 0x5A4E0002u, 1.0f);
+    fill_hf(v, 0x5A4E0003u, 1.0f);
+
+    auto *k_sh = static_cast<uint16_t *>(rpcmem_alloc(
+      RPCMEM_HEAP_ID_SYSTEM, RPCMEM_DEFAULT_FLAGS, static_cast<int>(kv_bytes)));
+    auto *v_sh = static_cast<uint16_t *>(rpcmem_alloc(
+      RPCMEM_HEAP_ID_SYSTEM, RPCMEM_DEFAULT_FLAGS, static_cast<int>(kv_bytes)));
+    ASSERT_NE(k_sh, nullptr) << "rpcmem_alloc failed";
+    ASSERT_NE(v_sh, nullptr) << "rpcmem_alloc failed";
+    std::memcpy(k_sh, k.data(), kv_bytes);
+    std::memcpy(v_sh, v.data(), kv_bytes);
+
+    std::vector<uint32_t> stats(kStatCount, 0);
+    auto call = [&](const uint16_t *kc, const uint16_t *vc,
+                    std::vector<float> &out) -> int {
+      if (decode) {
+        return nntr_hvx_attn_f16_decode(
+          handle_, s.n_q, s.cache_from, s.cache_to, s.n_head_q, s.n_head_kv,
+          s.head_dim, s.window, s.softcap, q.data(), static_cast<int>(q.size()),
+          kc, static_cast<int>(kv_elems), vc, static_cast<int>(kv_elems),
+          nullptr, 0, out.data(), static_cast<int>(out.size()), stats.data(),
+          kStatCount);
+      }
+      return nntr_hvx_attn_f16_prefill(
+        handle_, s.n_q, s.cache_from, s.cache_to, s.n_head_q, s.n_head_kv,
+        s.head_dim, s.window, s.br, s.bc, s.softcap, q.data(),
+        static_cast<int>(q.size()), kc, static_cast<int>(kv_elems), vc,
+        static_cast<int>(kv_elems), nullptr, 0, out.data(),
+        static_cast<int>(out.size()), stats.data(), kStatCount);
+    };
+    // gtest's ASSERT_* only returns from void functions, hence the
+    // out-parameter for the median.
+    auto timed = [&](const uint16_t *kc, const uint16_t *vc,
+                     std::vector<float> &out, int64_t &median_us) {
+      ASSERT_EQ(call(kc, vc, out), AEE_SUCCESS) << "warm-up call failed";
+      std::vector<int64_t> us;
+      for (int i = 0; i < iters; ++i) {
+        const int64_t t0 = now_us();
+        ASSERT_EQ(call(kc, vc, out), AEE_SUCCESS);
+        us.push_back(now_us() - t0);
+      }
+      std::sort(us.begin(), us.end());
+      median_us = us[us.size() / 2];
+    };
+
+    std::vector<float> out_heap(q_elems, 0.0f), out_sh(q_elems, 0.0f);
+    int64_t us_heap = -1, us_sh = -1;
+    timed(k.data(), v.data(), out_heap, us_heap);
+    timed(k_sh, v_sh, out_sh, us_sh);
+    rpcmem_free(k_sh);
+    rpcmem_free(v_sh);
+    if (::testing::Test::HasFatalFailure()) {
+      return;
+    }
+
+    EXPECT_EQ(
+      std::memcmp(out_heap.data(), out_sh.data(), q_elems * sizeof(float)), 0)
+      << "rpcmem and heap caches gave different bytes";
+    const char *path = decode ? "decode" : "prefill";
+    std::cout << "ATTN_F16_FIELD path=" << path << " mem=heap shape=" << s.n_q
+              << "x" << s.cache_to << "x" << s.n_head_q << "/" << s.n_head_kv
+              << "x" << s.head_dim << " field=call_us value=" << us_heap
+              << "\n";
+    std::cout << "ATTN_F16_FIELD path=" << path << " mem=rpcmem shape=" << s.n_q
+              << "x" << s.cache_to << "x" << s.n_head_q << "/" << s.n_head_kv
+              << "x" << s.head_dim << " field=call_us value=" << us_sh << "\n";
+    std::cout << "ATTN_F16_FIELD path=" << path << " shape=" << s.n_q << "x"
+              << s.cache_to << "x" << s.n_head_q << "/" << s.n_head_kv << "x"
+              << s.head_dim << " field=kv_bytes value=" << 2 * kv_bytes << "\n";
+  }
+};
+
+TEST_F(HtpSharedKvCache, DecodeHeapVsRpcmem) {
+  RunBoth({1, 1023, 1024, 16, 4, 128, 0, 0, 0}, /*decode=*/true);
+  RunBoth({1, 4095, 4096, 16, 4, 128, 0, 0, 0}, /*decode=*/true);
+}
+
+TEST_F(HtpSharedKvCache, PrefillHeapVsRpcmem) {
+  RunBoth({128, 896, 1024, 16, 4, 128, 0, 0, 0}, /*decode=*/false);
+  RunBoth({32, 4064, 4096, 16, 4, 128, 0, 0, 0}, /*decode=*/false);
 }
 
 } // namespace
