@@ -245,6 +245,31 @@ public:
     unsigned int n_head_kv, unsigned int head_dim, unsigned int window,
     float softcap, const float *sinks, float *out, unsigned int out_stride);
 
+  /**
+   * @brief Memory the backend's accelerator reads in place.
+   *
+   * sdpa_fp16_kvcache's K/V cache reaches the accelerator without a copy
+   * only when it lives in memory obtained here: on the HTP this is rpcmem,
+   * a dma-buf FastRPC maps into the DSP and cache-maintains per call, where
+   * a cache in ordinary memory is copied into a scratch buffer on every
+   * call (the whole used range, every token). The default backend has no
+   * such memory and returns nullptr; a caller then allocates as usual and
+   * still gets correct results, just with the copy.
+   *
+   * @param bytes block size
+   * @return a block at least 16-byte aligned, or nullptr when this backend
+   *         has no shared memory or the allocation failed
+   */
+  virtual void *alloc_shared(size_t bytes) {
+    (void)bytes;
+    return nullptr;
+  }
+
+  /**
+   * @brief Releases a block from alloc_shared(). nullptr is a no-op.
+   */
+  virtual void free_shared(void *block) { (void)block; }
+
   virtual bool supports_gemv_int4_batch_fp32() const { return false; }
   virtual void gemv_int4_batch_fp32(std::vector<void *> weights,
                                     std::vector<uint16_t *> scales,

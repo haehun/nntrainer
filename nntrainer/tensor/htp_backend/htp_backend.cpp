@@ -24,8 +24,11 @@
 // from).
 #include <AEEStdErr.h>
 #include <remote.h>
+#include <rpcmem.h>
 
 #include <nntr_hvx.h>
+
+#include <climits>
 
 namespace nntrainer {
 
@@ -62,6 +65,31 @@ HtpBackend::HtpBackend() {
   handle_ = static_cast<uint64_t>(h);
   enabled_ = true;
   ml_logi("HTP backend: FastRPC session to libnntr_hvx_skel.so open");
+}
+
+void *HtpBackend::alloc_shared(size_t bytes) {
+  // rpcmem_alloc takes an int; rpcmem_alloc2 (size_t) is not exported by
+  // every device's libcdsprpc.so, and no single KV cache slab approaches
+  // 2 GiB. RPCMEM_DEFAULT_FLAGS is the cached mapping: the CPU writes new
+  // K/V rows into this memory every token, and FastRPC cleans the passed
+  // range before each call.
+  if (!enabled_ || bytes == 0 || bytes > static_cast<size_t>(INT_MAX)) {
+    return nullptr;
+  }
+  void *block = rpcmem_alloc(RPCMEM_HEAP_ID_SYSTEM, RPCMEM_DEFAULT_FLAGS,
+                             static_cast<int>(bytes));
+  if (!block) {
+    ml_logw("rpcmem_alloc(%zu bytes) failed; this buffer stays on the heap "
+            "and FastRPC copies it per call",
+            bytes);
+  }
+  return block;
+}
+
+void HtpBackend::free_shared(void *block) {
+  if (block) {
+    rpcmem_free(block);
+  }
 }
 
 HtpBackend::~HtpBackend() {

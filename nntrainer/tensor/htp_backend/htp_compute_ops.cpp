@@ -52,6 +52,15 @@ public:
     return HtpBackend::global().enabled();
   }
 
+  // The KV cache the op below reads: in rpcmem, FastRPC hands the used
+  // range to the DSP by mapping, not by copying it every call.
+  void *alloc_shared(size_t bytes) override {
+    return HtpBackend::global().alloc_shared(bytes);
+  }
+  void free_shared(void *block) override {
+    HtpBackend::global().free_shared(block);
+  }
+
   bool sdpa_fp16_kvcache(const float *q, unsigned int q_stride,
                          const uint16_t *k_cache, const uint16_t *v_cache,
                          unsigned int kv_stride, unsigned int n_q,
