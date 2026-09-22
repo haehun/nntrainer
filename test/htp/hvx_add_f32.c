@@ -43,13 +43,17 @@ int nntr_hvx_open(const char *uri, remote_handle64 *handle) {
   // lifetime, instead of per call -- every other entry point
   // in this skel reaches vtcm_base/vtcm_size/config_off through the
   // session rather than re-acquiring either.
-  uint32_t hmx_fp16_rate = 0;
-  int res = hexkl_micro_hw_init(&s->vtcm_base, &s->vtcm_size, &hmx_fp16_rate);
+  int res =
+    hexkl_micro_hw_init(&s->vtcm_base, &s->vtcm_size, &s->hmx_fp16_rate);
   if (res != AEE_SUCCESS) {
     FARF(ERROR, "nntr_hvx_open: hexkl_micro_hw_init failed: 0x%08x", res);
     free(s);
     return res;
   }
+  // Kept on the session rather than dropped: the f16 attention entries gate
+  // on it, and HexKL's own f16 example treats 0 as "no fp16 HMX here".
+  FARF(ALWAYS, "nntr_hvx_open: vtcm_size=%u hmx_fp16_rate=%u",
+       (unsigned)s->vtcm_size, (unsigned)s->hmx_fp16_rate);
   // config_off depends only on vtcm_size (see hexkl_mm_u8i4_plan), so it is
   // computed once here rather than at every mm_u8i4_layer call.
   const uint32_t config_size = hexkl_micro_hmx_config_size();
@@ -106,6 +110,11 @@ int nntr_hvx_close(remote_handle64 handle) {
   for (uint32_t i = 0; i < HEXKL_MM_U8I8_MAX_WEIGHTS; ++i) {
     if (s->weights_u8i8.slots[i].in_use) {
       hexkl_weight_u8i8_release(&s->weights_u8i8, i);
+    }
+  }
+  for (uint32_t i = 0; i < HEXKL_KV_TILES_MAX; ++i) {
+    if (s->kv_tiles.slots[i].in_use) {
+      hexkl_kv_tiles_f16_release(&s->kv_tiles, i);
     }
   }
   hvx_worker_pool_destroy(s->quant_pool);
