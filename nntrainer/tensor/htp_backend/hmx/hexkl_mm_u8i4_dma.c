@@ -296,7 +296,8 @@ int hexkl_mm_u8i4_layer_run(hexkl_weight_u8i4_table *tbl, uint8_t *vtcm_base,
     hexkl_dma_ring_drain();
 
     hvx_dequant_i32_to_f32(acc_scratch, M, m_pad, h->N, act_scale, act_zp,
-                           h->colsum_w, h->w_scale, h->bias, out_cat + out_off);
+                           h->colsum_w, h->w_scale, h->bias, out_cat + out_off,
+                           pool);
     out_off += (size_t)M * h->N;
   }
 

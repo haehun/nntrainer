@@ -15,6 +15,8 @@
 
 #include <stdint.h>
 
+#include "hvx_worker_pool.h"
+
 /**
  * @brief Turns HMX int32 accumulators back into f32 (K3).
  *
@@ -35,11 +37,15 @@
  * @param[in]  colsum_w per-channel sum of the int4 weights, n entries
  * @param[in]  w_scale  per-channel dequantization multiplier, n entries
  * @param[out] out      m_valid by n f32, row-major
+ * @param[in]  pool     rows are independent, so this splits by row range --
+ *                      same argument as K1's, and unlike K2 it needs no
+ *                      precomputed per-row vector cache to do it. NULL runs
+ *                      single-threaded.
  */
 void hvx_dequant_i32_to_f32(const int32_t *acc, uint32_t m_valid,
                             uint32_t m_pad, uint32_t n, const float *act_scale,
                             const int32_t *act_zp, const int32_t *colsum_w,
-                            const float *w_scale, const float *bias,
-                            float *out);
+                            const float *w_scale, const float *bias, float *out,
+                            hvx_worker_pool *pool);
 
 #endif /* __NNTRAINER_HVX_DEQUANT_I32_H__ */
