@@ -287,10 +287,13 @@ if get_option('enable-htp')
   # remote.h and AEEStdErr.h live under <sdk_root>/incs/ and
   # <sdk_root>/incs/stddef/ respectively; sdkl.h is in the addon include/.
   hexagon_sdk_root = fs.parent(fs.parent(hexkl_root))
+  # ipc/fastrpc/incs: the FastRPC client-side headers the generated stub
+  # and HtpBackend's session (remote.h, remote64.h) come from.
   hexkl_inc = include_directories(
     hexkl_root / 'include',
     hexagon_sdk_root / 'incs',
     hexagon_sdk_root / 'incs' / 'stddef',
+    hexagon_sdk_root / 'ipc' / 'fastrpc' / 'incs',
     is_system: true)
   libsdkl = cc.find_library('sdkl', dirs: hexkl_lib_dir, required: true)
   hexkl_dep = declare_dependency(
