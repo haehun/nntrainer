@@ -166,6 +166,17 @@ int nntr_hvx_open(const char *uri, remote_handle64 *handle) {
   return AEE_SUCCESS;
 }
 
+AEEResult nntr_hvx_session_info(remote_handle64 handle, uint32_t *vtcm_size,
+                                uint32_t *hmx_fp16_rate) {
+  const nntr_hvx_session *s = (const nntr_hvx_session *)(uintptr_t)handle;
+  if (!s || !vtcm_size || !hmx_fp16_rate) {
+    return AEE_EBADPARM;
+  }
+  *vtcm_size = s->vtcm_size;
+  *hmx_fp16_rate = s->hmx_fp16_rate;
+  return AEE_SUCCESS;
+}
+
 int nntr_hvx_close(remote_handle64 handle) {
   nntr_hvx_session *s = (nntr_hvx_session *)handle;
   if (!s) {
