@@ -177,18 +177,19 @@ public:
   bool sdpa_q2_kvcache(int handle, unsigned int append_row0,
                        unsigned int append_rows, unsigned int kv_stride,
                        const uint16_t *k_rows, const uint16_t *v_rows,
-                       const float *q, const float *q_scale,
+                       const uint16_t *q, const float *q_enc,
                        unsigned int q_stride, unsigned int n_q,
                        unsigned int cache_from, unsigned int cache_to,
                        unsigned int n_head_q, unsigned int n_head_kv,
-                       unsigned int head_dim, unsigned int window, float *out,
+                       unsigned int head_dim, unsigned int window,
+                       uint16_t *out, const float *out_enc,
                        unsigned int out_stride) override {
     HtpBackend &hb = HtpBackend::global();
     if (!hb.enabled() || handle < 0 || n_q == 0 || n_head_kv == 0 ||
         (n_head_q % n_head_kv) != 0 || head_dim == 0 || (head_dim % 32) != 0 ||
         head_dim > 512 || cache_to < cache_from + n_q || cache_to > 0xFFFFu ||
         q_stride != n_head_q * head_dim || out_stride != n_head_q * head_dim ||
-        !q_scale ||
+        !q || !q_enc || !out || !out_enc ||
         (append_rows != 0 &&
          (kv_stride != n_head_kv * head_dim || !k_rows || !v_rows))) {
       return false;
@@ -196,11 +197,12 @@ public:
     const remote_handle64 h = static_cast<remote_handle64>(hb.handle());
     const int q_len = static_cast<int>(n_q * n_head_q * head_dim);
     const int rows_len = static_cast<int>(append_rows * kv_stride);
+    const int enc_len = static_cast<int>(2 * n_head_q);
     uint32_t stats[12] = {0};
     const int err = nntr_hvx_attn_q2_step(
       h, static_cast<uint32_t>(handle), append_row0, k_rows, rows_len, v_rows,
-      rows_len, n_q, cache_from, cache_to, n_head_q, window, q, q_len, q_scale,
-      static_cast<int>(n_head_q), out, q_len, stats, 12);
+      rows_len, n_q, cache_from, cache_to, n_head_q, window, q, q_len, q_enc,
+      enc_len, out_enc, enc_len, out, q_len, stats, 12);
     if (err != AEE_SUCCESS) {
       ml_logw("HTP row-blocked attention step failed: 0x%x; CPU fallback", err);
       return false;
