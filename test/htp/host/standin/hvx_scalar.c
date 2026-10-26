@@ -355,6 +355,68 @@ int hvx_quant_params_pack_u8_ah(const float *x, const uint16_t *x16,
   return 0;
 }
 
+/** hvx_quant_params_pack_u16_ah: per row the codes (one encoding: the
+    row's own; several: dequantized, then requantized over [0, 65535] with
+    the kernel's parameter formula), low bytes to one plane and high bytes
+    to the other in the u8 AH layout; pad rows scale 1, zero point 0. */
+int hvx_quant_params_pack_u16_ah(const float *x, const uint16_t *x16,
+                                 const float *x16_enc, uint32_t x16_hd,
+                                 uint32_t m_valid, uint32_t m_pad, uint32_t k,
+                                 float *pre_scratch, float *scale, int32_t *zp,
+                                 uint8_t *out_lo, uint8_t *out_hi,
+                                 hvx_worker_pool *pool) {
+  (void)pool;
+  const int direct = x16 && x16_hd == k;
+  if ((!x && !x16) || k % 32u != 0u ||
+      (x16 && (!x16_enc || x16_hd == 0u || x16_hd % 64u != 0u ||
+               k % x16_hd != 0u || (!direct && !pre_scratch))))
+    return -1;
+  memset(out_lo, 0, (size_t)m_pad * k);
+  memset(out_hi, 0, (size_t)m_pad * k);
+  const uint32_t kt_n = k / 32u;
+  for (uint32_t m = 0; m < m_pad; ++m) {
+    scale[m] = 1.0f;
+    zp[m] = 0;
+  }
+  for (uint32_t m = 0; m < m_valid; ++m) {
+    const float *row = x ? x + (size_t)m * k : NULL;
+    if (direct) {
+      scale[m] = x16_enc[0];
+      zp[m] = (int32_t)nearbyintf(x16_enc[1]);
+    } else {
+      if (x16) {
+        for (uint32_t j = 0; j < k; ++j)
+          pre_scratch[j] =
+            ((float)x16[(size_t)m * k + j] - x16_enc[2u * (j / x16_hd) + 1u]) *
+            x16_enc[2u * (j / x16_hd)];
+        row = pre_scratch;
+      }
+      float lo = 0.f, hi = 0.f;
+      for (uint32_t j = 0; j < k; ++j) {
+        lo = row[j] < lo ? row[j] : lo;
+        hi = row[j] > hi ? row[j] : hi;
+      }
+      if (lo != hi) {
+        scale[m] = (hi - lo) / 65535.0f;
+        long z = (long)nearbyintf(-lo / scale[m]);
+        zp[m] = (int32_t)(z < 0 ? 0 : (z > 65535 ? 65535 : z));
+      }
+    }
+    const float inv = 1.0f / scale[m];
+    for (uint32_t j = 0; j < k; ++j) {
+      long q = direct ? (long)x16[(size_t)m * k + j]
+                      : (long)nearbyintf(row[j] * inv) + zp[m];
+      q = q < 0 ? 0 : (q > 65535 ? 65535 : q);
+      const size_t d = (size_t)(m / 64u) * kt_n * 2048u +
+                       (size_t)(j / 32u) * 2048u + (size_t)(m % 64u) * 32u +
+                       j % 32u;
+      out_lo[d] = (uint8_t)(q & 0xff);
+      out_hi[d] = (uint8_t)(q >> 8);
+    }
+  }
+  return 0;
+}
+
 /* The tile dequant without the buffer hook: the pooled workers below call
    it on their own stack tiles, which lanes run one after another on the
    host share, so reporting those would be a false cross-lane race. */
@@ -457,6 +519,19 @@ void hvx_dq_tiles_rows_worker(uint32_t n_threads, uint32_t i, void *vjob) {
       const uint32_t c0 = (c->nt0 + j) * 32u;
       const int32_t *tile =
         (const int32_t *)(c->tiles_base + (size_t)j * c->tile_stride);
+      if (c->lo_off) { /* a16: 256 hi + lo in f32, the kernel's order */
+        const int32_t *tlo =
+          (const int32_t *)((const uint8_t *)tile + c->lo_off);
+        for (uint32_t cc = 0; cc < 32u; ++cc) {
+          const size_t e = (size_t)m * c->row_stride + cc;
+          const float af = (float)tile[e] * 256.0f + (float)tlo[e];
+          c->dst_a[(size_t)m * c->dst_stride + c0 + cc] =
+            (af - (float)c->act_zp[m] * (float)c->colsum_w[c0 + cc]) *
+              c->act_scale[m] * c->w_scale[c0 + cc] +
+            c->bias[c0 + cc];
+        }
+        continue;
+      }
       hvx_dequant_acc_tile_to_f32(
         tile + (size_t)m * c->row_stride, c->row_stride, 1u, c->act_scale + m,
         c->act_zp + m, c->colsum_w + c0, c->w_scale + c0, c->bias + c0,
@@ -493,10 +568,10 @@ void hvx_dequant_acc_tiles_to_f32(
   (void)pool;
   if (!tiles_base || n_tiles == 0u || m_count == 0u)
     return;
-  hvx_dq_tiles_job jb = {tiles_base, tile_stride, nt0,    row_stride,
-                         m_count,    act_scale,   act_zp, colsum_w,
-                         w_scale,    bias,        dst_a,  dst_b,
-                         split,      dst_stride,  n_tiles};
+  hvx_dq_tiles_job jb = {tiles_base, tile_stride, nt0,     row_stride,
+                         m_count,    act_scale,   act_zp,  colsum_w,
+                         w_scale,    bias,        dst_a,   dst_b,
+                         split,      dst_stride,  n_tiles, 0u};
   hvx_dq_tiles_worker(1u, 0u, &jb);
 }
 /* Fused gate/up dequant + SwiGLU: staged slot j is gate column g0 + j and

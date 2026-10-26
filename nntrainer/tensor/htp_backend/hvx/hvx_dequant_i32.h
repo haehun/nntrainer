@@ -159,6 +159,11 @@ typedef struct {
   uint32_t split;
   uint32_t dst_stride;
   uint32_t n_tiles;
+  /** 0, or (hvx_dq_tiles_rows_worker only) the bytes from a tile to its
+   *  activation's low-byte sweep: the tile holds the high-byte sweep and
+   *  the accumulator is 256 hi + lo, combined in f32 (an a16 activation,
+   *  hexkl_mm_opts.act16) */
+  uint32_t lo_off;
 } hvx_dq_tiles_job;
 
 /** @brief hvx_worker_pool_func over an hvx_dq_tiles_job. */

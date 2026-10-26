@@ -209,6 +209,7 @@ void hvx_dq_tiles_rows_worker(uint32_t n_threads, uint32_t i, void *vjob) {
   const HVX_UVector *cs = (const HVX_UVector *)(c->colsum_w + c0);
   const HVX_UVector *ws = (const HVX_UVector *)(c->w_scale + c0);
   const HVX_UVector *bs = (const HVX_UVector *)(c->bias + c0);
+  const HVX_Vector v256 = hvx_splat_sf(256.0f);
 
   for (uint32_t m = lo; m < hi; ++m) {
     const HVX_Vector vs = hvx_splat_sf(c->act_scale[m]);
@@ -218,8 +219,16 @@ void hvx_dq_tiles_rows_worker(uint32_t n_threads, uint32_t i, void *vjob) {
     for (uint32_t j = 0; j < c->n_tiles; ++j) {
       const int32_t *tile =
         (const int32_t *)(c->tiles_base + (size_t)j * c->tile_stride);
-      const HVX_Vector af = Q6_Vsf_equals_Vw(
+      HVX_Vector af = Q6_Vsf_equals_Vw(
         ((const HVX_UVector *)(tile + (size_t)m * c->row_stride))[0]);
+      if (c->lo_off) { /* 256 hi + lo: past int32 at K >~ 1024, so in f32 */
+        const int32_t *tlo =
+          (const int32_t *)((const uint8_t *)tile + c->lo_off);
+        af = Q6_Vsf_vadd_VsfVsf(
+          Q6_Vsf_vmpy_VsfVsf(af, v256),
+          Q6_Vsf_equals_Vw(
+            ((const HVX_UVector *)(tlo + (size_t)m * c->row_stride))[0]));
+      }
       /* DQ_TILE_ROW's operations, in its order */
       vo[j] = Q6_Vsf_vadd_VsfVsf(
         Q6_Vsf_vmpy_VsfVsf(
@@ -245,9 +254,10 @@ void hvx_dequant_acc_tiles_to_f32(
   if (!tiles_base || n_tiles == 0u || m_count == 0u) {
     return;
   }
-  hvx_dq_tiles_job c = {tiles_base, tile_stride, nt0,      row_stride, m_count,
-                        act_scale,  act_zp,      colsum_w, w_scale,    bias,
-                        dst_a,      dst_b,       split,    dst_stride, n_tiles};
+  hvx_dq_tiles_job c = {tiles_base, tile_stride, nt0,     row_stride,
+                        m_count,    act_scale,   act_zp,  colsum_w,
+                        w_scale,    bias,        dst_a,   dst_b,
+                        split,      dst_stride,  n_tiles, 0u};
   hvx_worker_pool_run(pool, hvx_dq_tiles_worker, &c, n_tiles);
 }
 

@@ -448,6 +448,32 @@ if "$OUT/geglu_mutant" > "$OUT/geglu_mutant.log"; then
 fi
 echo "GEGLU MUTANT CAUGHT: gelu replaced by silu ($(grep -o 'geglu bit-exact [0-9/]*' "$OUT/geglu_mutant.log"))"
 
+# The a16 activation pack (hvx_quant_params_pack_u16_ah) and the a16
+# dequant combine, the REAL HVX code on hvx_emu/, bit for bit against their
+# scalar spec (QUANT U16 OK). Then the low and high byte planes swapped in
+# the pack, which must fail it.
+quant16_check() { # quant16_check <hvx_quant_u8.c> <exe>
+  "$cc" -std=gnu11 -O2 -Wall -Wextra -Wno-unused-parameter -ffp-contract=off \
+    -Wno-format-truncation -pthread -include malloc.h \
+    -I "$HERE/hvx_emu" -I "$HERE/stub" -I "$BACKEND/.." -I "$BACKEND" \
+    -I "$BACKEND/hmx" -I "$BACKEND/hvx" \
+    -o "$2" "$HERE/quant_u16_host_check.c" "$1" \
+    "$BACKEND/hvx/hvx_dequant_i32.c" "$BACKEND/hvx/hvx_rmsnorm_rows_f32.c" \
+    "$BACKEND/hvx/hvx_worker_pool.c" -lm
+}
+quant16_check "$BACKEND/hvx/hvx_quant_u8.c" "$OUT/quant_u16_host_check"
+"$OUT/quant_u16_host_check"
+mut='s/store16_group4(h01, h23, lo + d, hi + d)/store16_group4(h01, h23, hi + d, lo + d)/'
+sed "$mut" "$BACKEND/hvx/hvx_quant_u8.c" > "$OUT/hvx_quant_u8.c"
+if cmp -s "$OUT/hvx_quant_u8.c" "$BACKEND/hvx/hvx_quant_u8.c"; then
+  echo "QUANT U16 MUTATION DID NOT APPLY: $mut"; exit 1
+fi
+quant16_check "$OUT/hvx_quant_u8.c" "$OUT/quant_u16_mutant"
+if "$OUT/quant_u16_mutant" > "$OUT/quant_u16_mutant.log"; then
+  echo "QUANT U16 MUTANT PASSED (the check is blind): $mut"; exit 1
+fi
+echo "QUANT U16 MUTANT CAUGHT: byte planes swapped ($(grep -c 'bytes bad [1-9]' "$OUT/quant_u16_mutant.log") of 3 sources)"
+
 # The prefill-shape RMSNorm rows (doc 57 section 5 step 4): the real HVX
 # source on the lane emulation against a double reference, at the hidden
 # width, per head, gamma-less and in place (RMSNORM ROWS OK).
