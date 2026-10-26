@@ -182,6 +182,63 @@ int main(void) {
     fail |= bad != 0;
   }
 
+  /** the byte-plane readout (planes24): the same accumulators as three
+      planes a tile, padded to 8 KiB slots as the kernel stages them, must
+      dequantize to the bytes the int32 tiles give -- a8 (no lo) and a16 */
+  {
+    enum { NT = 3, RS = HEXKL_ACC_TILE_COLS, SLOT = 8192 };
+    static int32_t ti[2 * NT][64 * RS];
+    static uint8_t tp[2 * NT][SLOT];
+    static float g_int[64 * NT * 32], g_pl[64 * NT * 32];
+    static int32_t cs[NT * 32];
+    static float wsc[NT * 32], bias[NT * 32];
+    for (uint32_t t = 0; t < 2u * NT; ++t)
+      for (uint32_t i = 0; i < 64u * 32u; ++i) {
+        const int32_t v = (int32_t)(rnd() % 16777215u) - 8388607;
+        ti[t][(i / 32u) * RS + i % 32u] = v;
+        tp[t][i] = (uint8_t)v;
+        tp[t][2048u + i] = (uint8_t)(v >> 8);
+        tp[t][4096u + i] = (uint8_t)(v >> 16);
+      }
+    for (uint32_t c = 0; c < NT * 32u; ++c) {
+      cs[c] = (int32_t)(rnd() % 40001u) - 20000;
+      wsc[c] = 0.001f * (float)(1u + rnd() % 50u);
+      bias[c] = 0.01f * (float)(rnd() % 100u);
+    }
+    for (uint32_t m = 0; m < 64u; ++m) {
+      s[m] = 1e-4f * (float)(1u + rnd() % 30u);
+      z[m] = (int32_t)(rnd() % 65536u);
+    }
+    for (int a16 = 0; a16 < 2; ++a16) {
+      hvx_dq_rows_job rj;
+      memset(&rj, 0, sizeof rj);
+      rj.t.row_stride = RS;
+      rj.t.m_count = 64u;
+      rj.t.act_scale = s;
+      rj.t.act_zp = z;
+      rj.t.colsum_w = cs;
+      rj.t.w_scale = wsc;
+      rj.t.bias = bias;
+      rj.t.dst_stride = NT * 32u;
+      rj.t.n_tiles = NT;
+      rj.t.tiles_base = (const uint8_t *)ti[0];
+      rj.t.tile_stride = sizeof ti[0];
+      rj.t.lo_off = a16 ? NT * sizeof ti[0] : 0u;
+      rj.t.dst_a = g_int;
+      hvx_dq_tiles_rows_worker(1u, 0u, &rj);
+      rj.t.tiles_base = tp[0];
+      rj.t.tile_stride = SLOT;
+      rj.t.lo_off = a16 ? NT * SLOT : 0u;
+      rj.t.planes24 = 1u;
+      rj.t.dst_a = g_pl;
+      hvx_dq_tiles_rows_worker(1u, 0u, &rj);
+      const int same = !memcmp(g_int, g_pl, sizeof g_int);
+      printf("%-22s: %s\n", a16 ? "planes24 a16" : "planes24 a8",
+             same ? "bit-identical to int32 tiles" : "DIFFERS");
+      fail |= !same;
+    }
+  }
+
   printf(fail ? "\nQUANT U16 FAIL\n" : "\nQUANT U16 OK\n");
   return fail;
 }

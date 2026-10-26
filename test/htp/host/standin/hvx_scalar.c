@@ -69,6 +69,29 @@ int hexkl_micro_hmx_acc_read_int32(uint8_t *base, uint32_t cfg, uint32_t off) {
   return 0;
 }
 
+/** The FC's byte-plane readout (hexkl_mm_u8i4_dma.c acc_read_planes24):
+    bytes 0, 1, 2 of each element, element p = row p / 32, column p % 32,
+    one 2 KiB plane each -- what the three device converts write. */
+void hexkl_fc_acc_read_planes24(uint8_t *base, uint32_t off) {
+  uint8_t *d = base + off;
+  for (uint32_t p = 0; p < 2048u; ++p) {
+    const uint32_t v = (uint32_t)g_acc[p / 32u][p % 32u];
+    d[p] = (uint8_t)v;
+    d[2048u + p] = (uint8_t)(v >> 8);
+    d[4096u + p] = (uint8_t)(v >> 16);
+  }
+}
+
+/** @brief Element (r, c) of a staged tile in either readout format. */
+static int32_t staged_at(const hvx_dq_tiles_job *c, const uint8_t *tile,
+                         uint32_t r, uint32_t col) {
+  if (!c->planes24)
+    return ((const int32_t *)tile)[(size_t)r * c->row_stride + col];
+  const uint32_t p = r * 32u + col;
+  return (int32_t)tile[p] | ((int32_t)tile[2048u + p] << 8) |
+         ((int32_t)(int8_t)tile[4096u + p] << 16);
+}
+
 /* ---- the u8i4 GEMV: the same sum as the tile above, over the tiles the
    kernel points it at. rows1 picks between two HVX loops that compute
    the same int32 sums (hvx_gemm_u8i4_wh.c), so it is one function here;
@@ -519,12 +542,12 @@ void hvx_dq_tiles_rows_worker(uint32_t n_threads, uint32_t i, void *vjob) {
       const uint32_t c0 = (c->nt0 + j) * 32u;
       const int32_t *tile =
         (const int32_t *)(c->tiles_base + (size_t)j * c->tile_stride);
-      if (c->lo_off) { /* a16: 256 hi + lo in f32, the kernel's order */
-        const int32_t *tlo =
-          (const int32_t *)((const uint8_t *)tile + c->lo_off);
+      if (c->lo_off || c->planes24) { /* the kernel's order */
+        const uint8_t *th = (const uint8_t *)tile;
         for (uint32_t cc = 0; cc < 32u; ++cc) {
-          const size_t e = (size_t)m * c->row_stride + cc;
-          const float af = (float)tile[e] * 256.0f + (float)tlo[e];
+          float af = (float)staged_at(c, th, m, cc);
+          if (c->lo_off) /* a16: 256 hi + lo in f32 */
+            af = af * 256.0f + (float)staged_at(c, th + c->lo_off, m, cc);
           c->dst_a[(size_t)m * c->dst_stride + c0 + cc] =
             (af - (float)c->act_zp[m] * (float)c->colsum_w[c0 + cc]) *
               c->act_scale[m] * c->w_scale[c0 + cc] +
@@ -568,10 +591,10 @@ void hvx_dequant_acc_tiles_to_f32(
   (void)pool;
   if (!tiles_base || n_tiles == 0u || m_count == 0u)
     return;
-  hvx_dq_tiles_job jb = {tiles_base, tile_stride, nt0,     row_stride,
-                         m_count,    act_scale,   act_zp,  colsum_w,
-                         w_scale,    bias,        dst_a,   dst_b,
-                         split,      dst_stride,  n_tiles, 0u};
+  hvx_dq_tiles_job jb = {tiles_base, tile_stride, nt0,      row_stride, m_count,
+                         act_scale,  act_zp,      colsum_w, w_scale,    bias,
+                         dst_a,      dst_b,       split,    dst_stride, n_tiles,
+                         0u,         0u};
   hvx_dq_tiles_worker(1u, 0u, &jb);
 }
 /* Fused gate/up dequant + SwiGLU: staged slot j is gate column g0 + j and

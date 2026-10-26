@@ -204,7 +204,9 @@ int main(void) {
     const uint32_t k_tiles = K / 32u, m_pad = 192u;
     const uint32_t act = (m_pad / 64u) * k_tiles * 2048u;
     const uint32_t wb = k_tiles * (N[0] / 32u) * 512u;
-    const uint32_t result_off = act + 2u * wb;
+    /** the weight double buffer, then the byte-plane readout's three 1 KiB
+        convert blocks rounded up to the 2 KiB activation alignment */
+    const uint32_t result_off = act + 2u * wb + 4096u;
     rc = hexkl_mm_u8i4_layer_run(&g_tbl, vtcm, result_off + 2u * 8192u,
                                  result_off + 2u * 8192u, M, K, handles, 3, x,
                                  got, NULL);

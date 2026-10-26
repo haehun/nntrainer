@@ -19,6 +19,7 @@
 #include <AEEStdErr.h>
 
 #include "hexkl_acc_tile.h"
+#include "hexkl_cvt.h"
 #include "hexkl_dma_ring.h"
 #include "hexkl_hmx_mm.h"
 #include "hexkl_micro.h"
@@ -61,6 +62,47 @@ static inline int mm_u8i4_tile(uint8_t *vtcm_base, uint32_t act_off,
 }
 /** @brief Bytes in one int32 accumulator tile (64x32 values). */
 #define ACC_TILE_BYTES 8192u
+
+#if defined(__hexagon__)
+/** @brief The accumulator as three byte planes (bytes 0-2 of its int24
+ *  value) at @a dst_off, through the bias blocks at @a blk_off: scales
+ *  512, 2 and 2^-7, floor(acc * s / 512) of hexkl_cvt.h. Three converts
+ *  where hexkl_micro_hmx_acc_read_int32 runs four and then an HVX shuffle
+ *  on this thread -- measured on v79 at no cost over the tile's 88
+ *  multiplies against +170 ns for the library's; the bytes go to the
+ *  dequant's lanes as they are (hvx_dq_tiles_job.planes24). The unit
+ *  works in program order, so the clear after it needs no fence (checked
+ *  on v79 against the int32 readout over 64 tiles). */
+static inline void acc_read_planes24(uint8_t *vtcm_base, uint32_t blk_off,
+                                     uint32_t dst_off) {
+  uint8_t *b = vtcm_base + blk_off, *d = vtcm_base + dst_off;
+  hexkl_cvt_issue(b, d);
+  hexkl_cvt_issue(b + HEXKL_CVT_BLOCK_BYTES, d + HEXKL_CVT_PLANE_BYTES);
+  hexkl_cvt_issue(b + 2u * HEXKL_CVT_BLOCK_BYTES,
+                  d + 2u * HEXKL_CVT_PLANE_BYTES);
+}
+/** @brief Returns once the convert that wrote the planes at @a dst_off is
+ *  done: a load of its last vector waits for the unit (hexkl_attn_q2.c's
+ *  cvt_fence), so the planes behind it can go to the lanes. */
+static inline void planes24_fence(const uint8_t *vtcm_base, uint32_t dst_off) {
+  const volatile HVX_Vector *v =
+    (const volatile HVX_Vector *)(vtcm_base + dst_off +
+                                  3u * HEXKL_CVT_PLANE_BYTES - 128u);
+  (void)*v;
+}
+#else
+/* Host builds: the HMX stand-in's accumulator (test/htp/host/standin). */
+void hexkl_fc_acc_read_planes24(uint8_t *vtcm_base, uint32_t dst_off);
+static inline void acc_read_planes24(uint8_t *vtcm_base, uint32_t blk_off,
+                                     uint32_t dst_off) {
+  (void)blk_off;
+  hexkl_fc_acc_read_planes24(vtcm_base, dst_off);
+}
+static inline void planes24_fence(const uint8_t *vtcm_base, uint32_t dst_off) {
+  (void)vtcm_base;
+  (void)dst_off;
+}
+#endif
 /** @brief Largest single DMA row HexKL/HVX will move correctly; rows above
  *         this size have a documented hardware bug (doc13 §3a, §5). */
 #define MAX_DMA_ROW_BYTES 262144u
@@ -585,8 +627,11 @@ int hexkl_mm_u8i4_layer_run(hexkl_weight_u8i4_table *tbl, uint8_t *vtcm_base,
                  HEXKL_HMX_ACTIVATION_ALIGNMENT) +
       wb_max,
   };
-  const uint32_t result_off =
-    ROUND_UP_U32(wbuf[1] + wb_max, HEXKL_HMX_ACTIVATION_ALIGNMENT);
+  /* the three convert bias blocks of the byte-plane readout */
+  const uint32_t cvt_off =
+    ROUND_UP_U32(wbuf[1] + wb_max, HEXKL_CVT_BLOCK_BYTES);
+  const uint32_t result_off = ROUND_UP_U32(cvt_off + 3u * HEXKL_CVT_BLOCK_BYTES,
+                                           HEXKL_HMX_ACTIVATION_ALIGNMENT);
   const uint32_t arena = vtcm_size < config_off ? vtcm_size : config_off;
   if (result_off + 2u * n_sweeps * ACC_TILE_BYTES > arena) {
     return AEE_ENOMEMORY; // double-buffered widest weight does not fit VTCM
@@ -727,6 +772,27 @@ int hexkl_mm_u8i4_layer_run(hexkl_weight_u8i4_table *tbl, uint8_t *vtcm_base,
      into out_cat and the job has no flag for it) nor without the in-place
      tile layout; those keep the synchronous tile-at-a-time path. */
   const int pipelined = acc_layout->usable && !o->accumulate;
+  /** The pipelined epilogue takes the accumulator as three byte planes when
+      a sweep fits int24: |acc| <= 255 * 8 * K < 2^23, K <= 4111 (the
+      Gemma-4 / LFM2 FC widths); a deeper K keeps the int32 readout. */
+  const int planes24 = pipelined && (uint64_t)K * 255u * 8u < (1u << 23);
+  /** Every tile below sits at a multiple of its alignment from these bases
+      (activations at 2 KiB, weights at 512 B), so the HMX loads' alignment
+      holds for the whole call once it holds for them: the packets go out
+      inline with no per-tile test or return code (~10 % of a tile's time
+      on v79). Host builds keep the library call (hexkl_hmx_mm_aligned). */
+  const int inline_mm =
+    hexkl_hmx_mm_aligned(vtcm_base + act_off, vtcm_base + wbuf[0]) &&
+    hexkl_hmx_mm_aligned(vtcm_base + act_hi_off, vtcm_base + wbuf[1]);
+  if (planes24) {
+    hexkl_cvt_block_set_uniform(vtcm_base + cvt_off,
+                                hexkl_cvt_f32_to_hf(512.0f));
+    hexkl_cvt_block_set_uniform(vtcm_base + cvt_off + HEXKL_CVT_BLOCK_BYTES,
+                                hexkl_cvt_f32_to_hf(2.0f));
+    hexkl_cvt_block_set_uniform(vtcm_base + cvt_off +
+                                  2u * HEXKL_CVT_BLOCK_BYTES,
+                                hexkl_cvt_f32_to_hf(1.0f / 128.0f));
+  }
   hvx_dq_rows_job dq_job[2];
   fc_post post[2];
   uint32_t sb = 0u;
@@ -797,20 +863,37 @@ int hexkl_mm_u8i4_layer_run(hexkl_weight_u8i4_table *tbl, uint8_t *vtcm_base,
           for (uint32_t sw = 0; sw < n_sweeps; ++sw) {
             const uint32_t plane = sw == 0u ? act_hi_off : act_off;
             hexkl_micro_hmx_acc_clear_int32();
-            for (uint32_t kt = 0; kt < k_tiles; ++kt) {
-              const uint32_t act_tile_off =
-                plane + (rb * k_tiles + kt) * HEXKL_HMX_ACTIVATION_ALIGNMENT;
-              const uint32_t w_tile_off =
-                wcur + (kt * nt_n + nt0 + j) * WEIGHT_TILE_BYTES_U8I4;
-              rc = mm_u8i4_tile(vtcm_base, act_tile_off, w_tile_off);
-              if (rc != AEE_SUCCESS) {
-                goto out;
+            if (inline_mm) {
+              const uint8_t *a = vtcm_base + plane +
+                                 rb * k_tiles * HEXKL_HMX_ACTIVATION_ALIGNMENT;
+              const uint8_t *w =
+                vtcm_base + wcur + (nt0 + j) * WEIGHT_TILE_BYTES_U8I4;
+              const uint32_t w_step = nt_n * WEIGHT_TILE_BYTES_U8I4;
+              for (uint32_t kt = 0; kt < k_tiles; ++kt) {
+                hexkl_hmx_mm_u8i4(a + kt * HEXKL_HMX_ACTIVATION_ALIGNMENT,
+                                  w + kt * w_step);
+              }
+            } else {
+              for (uint32_t kt = 0; kt < k_tiles; ++kt) {
+                const uint32_t act_tile_off =
+                  plane + (rb * k_tiles + kt) * HEXKL_HMX_ACTIVATION_ALIGNMENT;
+                const uint32_t w_tile_off =
+                  wcur + (kt * nt_n + nt0 + j) * WEIGHT_TILE_BYTES_U8I4;
+                rc = mm_u8i4_tile(vtcm_base, act_tile_off, w_tile_off);
+                if (rc != AEE_SUCCESS) {
+                  goto out;
+                }
               }
             }
             HEXKL_PROBE_T0(p0);
-            rc = hexkl_micro_hmx_acc_read_int32(
-              vtcm_base, config_off,
-              stage_off + (sw * acc_tiles + j) * ACC_TILE_BYTES);
+            const uint32_t slot_off =
+              stage_off + (sw * acc_tiles + j) * ACC_TILE_BYTES;
+            if (planes24) {
+              acc_read_planes24(vtcm_base, cvt_off, slot_off);
+            } else {
+              rc =
+                hexkl_micro_hmx_acc_read_int32(vtcm_base, config_off, slot_off);
+            }
             HEXKL_PROBE_ADD(HEXKL_PROBE_ACC_READ, p0);
             if (rc != AEE_SUCCESS) {
               goto out;
@@ -856,6 +939,12 @@ int hexkl_mm_u8i4_layer_run(hexkl_weight_u8i4_table *tbl, uint8_t *vtcm_base,
             jb->dst_stride = ld_h;
             jb->n_tiles = nb;
             jb->lo_off = o->act16 ? acc_tiles * ACC_TILE_BYTES : 0u;
+            jb->planes24 = (uint32_t)planes24;
+            if (planes24) { /* the batch's last planes, written last */
+              planes24_fence(
+                vtcm_base, stage_off + ((n_sweeps - 1u) * acc_tiles + nb - 1u) *
+                                         ACC_TILE_BYTES);
+            }
             hvx_worker_pool_submit(o->pool, hvx_dq_tiles_rows_worker, rj, cnt);
           }
         } else if (acc_layout->usable) {

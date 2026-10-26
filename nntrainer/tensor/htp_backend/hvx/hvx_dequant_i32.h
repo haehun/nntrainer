@@ -164,7 +164,15 @@ typedef struct {
    *  the accumulator is 256 hi + lo, combined in f32 (an a16 activation,
    *  hexkl_mm_opts.act16) */
   uint32_t lo_off;
+  /** 0, or (hvx_dq_tiles_rows_worker only) every tile is the accumulator
+   *  as three byte planes of HVX_DQ_PLANE_BYTES -- bytes 0, 1, 2 of its
+   *  int24 value, element p at row p / 32, column p % 32, the convert
+   *  unit's layout (hexkl_cvt.h) -- instead of int32 at row_stride */
+  uint32_t planes24;
 } hvx_dq_tiles_job;
+
+/** @brief Bytes of one accumulator byte plane (hvx_dq_tiles_job.planes24). */
+#define HVX_DQ_PLANE_BYTES 2048u
 
 /** @brief hvx_worker_pool_func over an hvx_dq_tiles_job. */
 void hvx_dq_tiles_worker(uint32_t n_threads, uint32_t i, void *job);
